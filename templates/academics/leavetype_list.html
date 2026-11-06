@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Leave types | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Leave types</h1>
+  <a class="btn btn-primary" href="{% url 'leave_type_create' %}">Add leave type</a>
+</div>
+{% if leave_types %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white border">
+    <thead class="table-light"><tr><th>Name</th><th>Code</th><th>Description</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    {% for t in leave_types %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td><code>{{ t.code }}</code></td>
+        <td class="text-muted">{{ t.description|default:"—"|truncatechars:60 }}</td>
+        <td>{% include "partials/status_badge.html" with is_active=t.is_active %}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'leave_type_edit' t.pk %}">Edit</a>
+          {% url 'leave_type_toggle' t.pk as toggle_url %}
+          {% include "partials/toggle_button.html" with action=toggle_url is_active=t.is_active label=t.name %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-muted small">Deactivating a leave type hides it from new applications. Existing applications keep it.</p>
+{% else %}
+<div class="card card-body text-center py-5">
+  <p class="mb-3">No leave types yet. Add the types staff can apply for, for example Casual Leave.</p>
+  <div><a class="btn btn-primary" href="{% url 'leave_type_create' %}">Add leave type</a></div>
+</div>
+{% endif %}
+{% endblock %}

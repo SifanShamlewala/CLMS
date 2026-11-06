@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Add{% else %}Edit{% endif %} department | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Add department{% else %}Edit department{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+<form method="post" novalidate class="card card-body" style="max-width: 480px">
+  {% csrf_token %}
+  {% include "partials/field.html" with name="name" label="Name" maxlength=100 required=True %}
+  <p class="form-text">The head of department is assigned when you add staff.</p>
+  <div>
+    <button class="btn btn-primary" type="submit">Save department</button>
+    <a class="btn btn-link" href="{% url 'department_list' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

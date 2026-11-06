@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Departments | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Departments</h1>
+  <a class="btn btn-primary" href="{% url 'department_create' %}">Add department</a>
+</div>
+{% if departments %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white border">
+    <thead class="table-light">
+      <tr><th>Name</th><th>Head of department</th><th>Active staff</th><th>Status</th><th class="text-end">Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for d in departments %}
+      <tr>
+        <td>{{ d.name }}</td>
+        <td>{% if d.hod %}{{ d.hod.user.get_full_name|default:d.hod.user.get_username }}{% else %}<span class="text-muted">Not assigned</span>{% endif %}</td>
+        <td>{{ d.active_staff }}</td>
+        <td>{% include "partials/status_badge.html" with is_active=d.is_active %}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'department_edit' d.pk %}">Edit</a>
+          {% url 'department_toggle' d.pk as toggle_url %}
+          {% include "partials/toggle_button.html" with action=toggle_url is_active=d.is_active label=d.name %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card card-body text-center py-5">
+  <p class="mb-3">No departments yet. Add one, including “Administration” for the Principal’s profile.</p>
+  <div><a class="btn btn-primary" href="{% url 'department_create' %}">Add department</a></div>
+</div>
+{% endif %}
+{% endblock %}

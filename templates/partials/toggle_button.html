@@ -1,0 +1,12 @@
+{% comment %}
+Activate/deactivate button as a tiny POST form.
+Parameters: action (url), is_active (bool), label (record name for the confirm text).
+{% endcomment %}
+<form method="post" action="{{ action }}" class="d-inline"
+      {% if is_active %}onsubmit="return confirm('Deactivate {{ label|escapejs }}?');"{% endif %}>
+  {% csrf_token %}
+  <input type="hidden" name="active" value="{% if is_active %}0{% else %}1{% endif %}">
+  <button type="submit" class="btn btn-sm {% if is_active %}btn-outline-secondary{% else %}btn-outline-success{% endif %}">
+    {% if is_active %}Deactivate{% else %}Activate{% endif %}
+  </button>
+</form>

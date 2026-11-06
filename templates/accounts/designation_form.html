@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Add{% else %}Edit{% endif %} designation | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Add designation{% else %}Edit designation{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+<form method="post" novalidate class="card card-body" style="max-width: 480px">
+  {% csrf_token %}
+  {% include "partials/field.html" with name="title" label="Title" maxlength=100 required=True %}
+  <div>
+    <button class="btn btn-primary" type="submit">Save designation</button>
+    <a class="btn btn-link" href="{% url 'designation_list' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

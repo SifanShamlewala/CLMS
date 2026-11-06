@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Login · VSCLMS{% endblock %}
+{% block title %}Sign in | VSCLMS{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-5 col-lg-4">
     <div class="card shadow-sm">
       <div class="card-body">
         <h1 class="h4 mb-3">Sign in</h1>
-        {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+        {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
         <form method="post" novalidate>
           {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next|default:'' }}">
           <div class="mb-3">
             <label class="form-label" for="username">Username</label>
-            <input class="form-control" id="username" name="username"
-                   value="{{ username|default:'' }}" required autofocus>
+            <input class="form-control" id="username" name="username" value="{{ username|default:'' }}" required autofocus autocomplete="username">
           </div>
           <div class="mb-3">
             <label class="form-label" for="password">Password</label>
-            <input class="form-control" id="password" name="password" type="password" required>
+            <input class="form-control" id="password" name="password" type="password" required autocomplete="current-password">
           </div>
-          <button class="btn btn-primary w-100" type="submit">Login</button>
+          <button class="btn btn-primary w-100" type="submit">Sign in</button>
         </form>
       </div>
     </div>

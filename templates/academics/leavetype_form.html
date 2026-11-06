@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Add{% else %}Edit{% endif %} leave type | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Add leave type{% else %}Edit leave type{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+<form method="post" novalidate class="card card-body" style="max-width: 560px">
+  {% csrf_token %}
+  {% include "partials/field.html" with name="name" label="Name" maxlength=100 required=True %}
+  {% include "partials/field.html" with name="code" label="Code" maxlength=20 required=True help="Short code such as CL. Letters, numbers, hyphens and underscores; saved in capitals." %}
+  {% include "partials/field.html" with name="description" label="Description" maxlength=500 multiline=True %}
+  <div>
+    <button class="btn btn-primary" type="submit">Save leave type</button>
+    <a class="btn btn-link" href="{% url 'leave_type_list' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

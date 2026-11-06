@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Designations | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Designations</h1>
+  <a class="btn btn-primary" href="{% url 'designation_create' %}">Add designation</a>
+</div>
+{% if designations %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white border">
+    <thead class="table-light"><tr><th>Title</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    {% for d in designations %}
+      <tr>
+        <td>{{ d.title }}</td>
+        <td>{% include "partials/status_badge.html" with is_active=d.is_active %}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'designation_edit' d.pk %}">Edit</a>
+          {% url 'designation_toggle' d.pk as toggle_url %}
+          {% include "partials/toggle_button.html" with action=toggle_url is_active=d.is_active label=d.title %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card card-body text-center py-5">
+  <p class="mb-3">No designations yet. Add the first one, for example Professor or Lecturer.</p>
+  <div><a class="btn btn-primary" href="{% url 'designation_create' %}">Add designation</a></div>
+</div>
+{% endif %}
+{% endblock %}
