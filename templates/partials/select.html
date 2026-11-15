@@ -1,0 +1,19 @@
+{% load form_tags %}
+{% comment %}
+Drop-down with server-side error display and kept selection.
+Parameters: name, label, options (list of (value, text) pairs), blank (text of the
+empty choice, optional), required, help. Reads `values` and `errors` from the page.
+{% endcomment %}
+{% with err=errors|get_item:name selected=values|get_item:name %}
+<div class="mb-3">
+  <label class="form-label" for="id_{{ name }}">{{ label }}{% if required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+  <select id="id_{{ name }}" name="{{ name }}" class="form-select{% if err %} is-invalid{% endif %}">
+    {% if blank %}<option value="">{{ blank }}</option>{% endif %}
+    {% for value, text in options %}
+    <option value="{{ value }}"{% if value|stringformat:"s" == selected|stringformat:"s" %} selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+  {% if err %}<div class="invalid-feedback">{{ err }}</div>{% endif %}
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{% endwith %}

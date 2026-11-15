@@ -1,8 +1,9 @@
 {% load form_tags %}
 {% comment %}
-Text field with server-side error display and kept value.
-Parameters: name, label, maxlength (optional), required (optional),
-multiline (optional), help (optional). Reads `values` and `errors` from the page.
+Input field with server-side error display and kept value.
+Parameters: name, label, type (default text), maxlength, required, multiline,
+help, autocomplete. Reads `values` and `errors` from the page.
+Password fields never echo a value back into the page.
 {% endcomment %}
 {% with err=errors|get_item:name val=values|get_item:name %}
 <div class="mb-3">
@@ -11,8 +12,11 @@ multiline (optional), help (optional). Reads `values` and `errors` from the page
   <textarea id="id_{{ name }}" name="{{ name }}" rows="3" {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
             class="form-control{% if err %} is-invalid{% endif %}">{{ val }}</textarea>
   {% else %}
-  <input id="id_{{ name }}" name="{{ name }}" type="text" {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
-         class="form-control{% if err %} is-invalid{% endif %}" value="{{ val }}" {% if required %}required{% endif %}>
+  <input id="id_{{ name }}" name="{{ name }}" type="{{ type|default:'text' }}" {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+         class="form-control{% if err %} is-invalid{% endif %}"
+         {% if type != 'password' %}value="{{ val }}"{% endif %}
+         {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+         {% if required %}required{% endif %}>
   {% endif %}
   {% if err %}<div class="invalid-feedback">{{ err }}</div>{% endif %}
   {% if help %}<div class="form-text">{{ help }}</div>{% endif %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Add{% else %}Edit{% endif %} staff member | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Add staff member{% else %}Edit {{ staff.user.get_full_name|default:staff.user.get_username }}{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+
+<form method="post" novalidate class="card card-body mb-4" style="max-width: 720px">
+  {% csrf_token %}
+  <h2 class="h6">Account</h2>
+  {% if mode == "create" %}
+    {% include "partials/field.html" with name="username" label="Username" maxlength=150 required=True autocomplete="off" help="Used to sign in. It can’t be changed later." %}
+  {% else %}
+    <div class="mb-3"><div class="form-label">Username</div><div class="form-control-plaintext">{{ staff.user.get_username }}</div></div>
+  {% endif %}
+  <div class="row">
+    <div class="col-md-6">{% include "partials/field.html" with name="first_name" label="First name" maxlength=150 required=True %}</div>
+    <div class="col-md-6">{% include "partials/field.html" with name="last_name" label="Last name" maxlength=150 %}</div>
+  </div>
+  {% include "partials/field.html" with name="email" label="Email" type="email" maxlength=254 %}
+  {% if mode == "create" %}
+  <div class="row">
+    <div class="col-md-6">{% include "partials/field.html" with name="password" label="Password" type="password" required=True autocomplete="new-password" help="At least 8 characters, not too common, not all digits." %}</div>
+    <div class="col-md-6">{% include "partials/field.html" with name="password2" label="Confirm password" type="password" required=True autocomplete="new-password" %}</div>
+  </div>
+  {% endif %}
+
+  <h2 class="h6 mt-2">Employment</h2>
+  <div class="row">
+    <div class="col-md-6">{% include "partials/field.html" with name="employee_id" label="Employee ID" maxlength=30 required=True %}</div>
+    <div class="col-md-6">{% include "partials/field.html" with name="joined_on" label="Joining date" type="date" %}</div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">{% include "partials/select.html" with name="department" label="Department" options=department_options blank="Choose a department" required=True %}</div>
+    <div class="col-md-6">{% include "partials/select.html" with name="designation" label="Designation" options=designation_options blank="No designation" %}</div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">{% include "partials/select.html" with name="role" label="Role" options=role_options required=True help="A head of department is also set as the head of the department chosen above." %}</div>
+    <div class="col-md-6">{% include "partials/field.html" with name="phone" label="Phone" maxlength=15 %}</div>
+  </div>
+  <div>
+    <button class="btn btn-primary" type="submit">Save staff member</button>
+    <a class="btn btn-link" href="{% url 'staff_list' %}">Cancel</a>
+  </div>
+</form>
+
+{% if mode == "edit" %}
+<form method="post" action="{% url 'staff_password' staff.pk %}" novalidate class="card card-body" style="max-width: 720px">
+  {% csrf_token %}
+  <h2 class="h6">Reset password</h2>
+  <p class="text-muted small">Sets a new password right away and signs this person out everywhere. Share the new password securely.</p>
+  <div class="row">
+    <div class="col-md-6">{% include "partials/field.html" with name="password" label="New password" type="password" autocomplete="new-password" errors=None values=None %}</div>
+    <div class="col-md-6">{% include "partials/field.html" with name="password2" label="Confirm new password" type="password" autocomplete="new-password" errors=None values=None %}</div>
+  </div>
+  <div><button class="btn btn-outline-danger" type="submit">Change password</button></div>
+</form>
+{% endif %}
+{% endblock %}

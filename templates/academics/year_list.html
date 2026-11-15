@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Academic years | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Academic years</h1>
+  <a class="btn btn-primary" href="{% url 'year_create' %}">Add academic year</a>
+</div>
+{% if years %}
+{% if no_active %}
+<div class="alert alert-warning" role="alert">No academic year is active, so nobody can apply for leave yet. Choose “Make active” on the year to use.</div>
+{% endif %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white border">
+    <thead class="table-light"><tr><th>Name</th><th>Starts</th><th>Ends</th><th>Holidays</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    {% for y in years %}
+      <tr>
+        <td>{{ y.name }}</td>
+        <td>{{ y.start_date|date:"d M Y" }}</td>
+        <td>{{ y.end_date|date:"d M Y" }}</td>
+        <td><a href="{% url 'holiday_list' %}?year={{ y.pk }}">{{ y.holiday_count }}</a></td>
+        <td>{% if y.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Not active</span>{% endif %}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'year_edit' y.pk %}">Edit</a>
+          {% if not y.is_active %}
+          <form method="post" action="{% url 'year_activate' y.pk %}" class="d-inline"
+                onsubmit="return confirm('Make {{ y.name|escapejs }} the active year? The current active year will be switched off.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-success">Make active</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-muted small">Exactly one year is active at a time. Staff apply for leave in the active year. Making another year active switches the current one off.</p>
+{% else %}
+<div class="card card-body text-center py-5">
+  <p class="mb-3">No academic years yet. Add one, for example 2026-27, then make it active so staff can apply.</p>
+  <div><a class="btn btn-primary" href="{% url 'year_create' %}">Add academic year</a></div>
+</div>
+{% endif %}
+{% endblock %}

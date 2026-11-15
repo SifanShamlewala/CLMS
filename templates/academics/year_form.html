@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Add{% else %}Edit{% endif %} academic year | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Add academic year{% else %}Edit {{ year.name }}{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+<form method="post" novalidate class="card card-body" style="max-width: 480px">
+  {% csrf_token %}
+  {% include "partials/field.html" with name="name" label="Name" maxlength=20 required=True help="For example 2026-27." %}
+  {% include "partials/field.html" with name="start_date" label="Start date" type="date" required=True %}
+  {% include "partials/field.html" with name="end_date" label="End date" type="date" required=True %}
+  <div>
+    <button class="btn btn-primary" type="submit">Save academic year</button>
+    <a class="btn btn-link" href="{% url 'year_list' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

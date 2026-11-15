@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Holidays | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Holidays</h1>
+  {% if selected %}
+  <a class="btn btn-primary" href="{% url 'holiday_create' %}?year={{ selected.pk }}">Add holiday</a>
+  {% endif %}
+</div>
+
+{% if years %}
+<ul class="nav nav-pills mb-3">
+  {% for y in years %}
+  <li class="nav-item">
+    <a class="nav-link {% if y.pk == selected.pk %}active{% endif %}" href="{% url 'holiday_list' %}?year={{ y.pk }}">
+      {{ y.name }}{% if y.is_active %} (active){% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+<p class="text-muted">{{ selected.name }} runs from {{ selected.start_date|date:"d M Y" }} to {{ selected.end_date|date:"d M Y" }}. Sundays are never counted as leave, so they don’t need to be added here.</p>
+
+{% if holidays %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white border">
+    <thead class="table-light"><tr><th>Date</th><th>Name</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    {% for h in holidays %}
+      <tr>
+        <td>{{ h.date|date:"D, d M Y" }}{% if h.date|date:"w" == "0" %} <span class="badge text-bg-light border">Sunday</span>{% endif %}</td>
+        <td>{{ h.name }}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'holiday_edit' h.pk %}">Edit</a>
+          <form method="post" action="{% url 'holiday_delete' h.pk %}" class="d-inline"
+                onsubmit="return confirm('Remove {{ h.name|escapejs }}?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card card-body text-center py-5">
+  <p class="mb-3">No holidays in {{ selected.name }} yet.</p>
+  <div><a class="btn btn-primary" href="{% url 'holiday_create' %}?year={{ selected.pk }}">Add holiday</a></div>
+</div>
+{% endif %}
+{% else %}
+<div class="card card-body text-center py-5">
+  <p class="mb-3">Holidays belong to an academic year. Add an academic year first.</p>
+  <div><a class="btn btn-primary" href="{% url 'year_create' %}">Add academic year</a></div>
+</div>
+{% endif %}
+{% endblock %}

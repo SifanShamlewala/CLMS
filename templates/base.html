@@ -13,6 +13,14 @@
     {% if is_administrator %}
     <ul class="navbar-nav me-auto flex-wrap">
       <li class="nav-item">
+        <a class="nav-link {% if 'staff' in request.resolver_match.url_name %}active{% endif %}"
+           href="{% url 'staff_list' %}">Staff</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if 'department' in request.resolver_match.url_name %}active{% endif %}"
+           href="{% url 'department_list' %}">Departments</a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link {% if 'designation' in request.resolver_match.url_name %}active{% endif %}"
            href="{% url 'designation_list' %}">Designations</a>
       </li>
@@ -21,8 +29,12 @@
            href="{% url 'leave_type_list' %}">Leave types</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if 'department' in request.resolver_match.url_name %}active{% endif %}"
-           href="{% url 'department_list' %}">Departments</a>
+        <a class="nav-link {% if 'year' in request.resolver_match.url_name %}active{% endif %}"
+           href="{% url 'year_list' %}">Academic years</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if 'holiday' in request.resolver_match.url_name %}active{% endif %}"
+           href="{% url 'holiday_list' %}">Holidays</a>
       </li>
     </ul>
     {% else %}

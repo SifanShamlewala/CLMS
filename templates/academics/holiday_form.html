@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Add{% else %}Edit{% endif %} holiday | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Add holiday{% else %}Edit holiday in {{ holiday.academic_year.name }}{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+{% if mode == "create" and not year_options %}
+<div class="alert alert-warning" role="alert">Add an academic year first, then come back to add holidays. <a href="{% url 'year_create' %}">Add academic year</a></div>
+{% else %}
+<form method="post" novalidate class="card card-body" style="max-width: 480px">
+  {% csrf_token %}
+  {% if mode == "create" %}
+  {% include "partials/select.html" with name="academic_year" label="Academic year" options=year_options blank="Choose a year" required=True %}
+  {% endif %}
+  {% include "partials/field.html" with name="date" label="Date" type="date" required=True %}
+  {% include "partials/field.html" with name="name" label="Name" maxlength=100 required=True help="For example Independence Day." %}
+  <div>
+    <button class="btn btn-primary" type="submit">Save holiday</button>
+    <a class="btn btn-link" href="{% url 'holiday_list' %}{% if mode == 'edit' %}?year={{ holiday.academic_year_id }}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -13,9 +13,12 @@
 {% if is_administrator %}
 <h2 class="h6 mt-4">Setup</h2>
 <div class="list-group" style="max-width: 420px">
+  <a class="list-group-item list-group-item-action" href="{% url 'staff_list' %}">Staff</a>
   <a class="list-group-item list-group-item-action" href="{% url 'department_list' %}">Departments</a>
   <a class="list-group-item list-group-item-action" href="{% url 'designation_list' %}">Designations</a>
   <a class="list-group-item list-group-item-action" href="{% url 'leave_type_list' %}">Leave types</a>
+  <a class="list-group-item list-group-item-action" href="{% url 'year_list' %}">Academic years</a>
+  <a class="list-group-item list-group-item-action" href="{% url 'holiday_list' %}">Holidays</a>
 </div>
 {% endif %}
 {% endblock %}
