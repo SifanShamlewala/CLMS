@@ -8,7 +8,7 @@ from core.permissions import administrator_required
 from core.validation import DomainError
 
 from . import services
-from .models import AcademicYear, Holiday, LeaveType
+from .models import AcademicYear, Holiday, LeaveType, PolicyConfig
 
 
 # ------------------------------------------------------------------ leave types
@@ -204,3 +204,49 @@ def holiday_delete(request, pk):
     services.delete_holiday(holiday=holiday, actor=request.user)
     messages.success(request, f"Holiday “{holiday.name}” removed.")
     return _to_calendar(holiday.academic_year)
+
+
+# ------------------------------------------------------------------------ policy
+POLICY_FORM = "academics/policy_form.html"
+WEEKDAY_OPTIONS = [
+    ("0", "Monday"), ("1", "Tuesday"), ("2", "Wednesday"),
+    ("3", "Thursday"), ("4", "Friday"), ("5", "Saturday"),
+]
+
+
+def _policy_form(source):
+    """The values the form shows, from the saved policy or from a failed POST."""
+    if isinstance(source, PolicyConfig):
+        return {
+            "weekly_off_days": sorted(str(day) for day in source.weekly_off_days_set),
+            "hod_own_leave_route": source.hod_own_leave_route,
+            **{flag: getattr(source, flag) for flag in services.POLICY_FLAGS},
+        }
+    return {
+        "weekly_off_days": source.getlist("weekly_off_days"),
+        "hod_own_leave_route": source.get("hod_own_leave_route", ""),
+        **{flag: source.get(flag) == "on" for flag in services.POLICY_FLAGS},
+    }
+
+
+def _render_policy(request, form, errors):
+    selected = set(form["weekly_off_days"])
+    return render(request, POLICY_FORM, {
+        "form": form,
+        "errors": errors,
+        "weekday_options": [(value, text, value in selected) for value, text in WEEKDAY_OPTIONS],
+        "route_options": PolicyConfig.HodOwnLeaveRoute.choices,
+    })
+
+
+@administrator_required
+@require_http_methods(["GET", "POST"])
+def policy_edit(request):
+    if request.method == "POST":
+        try:
+            services.update_policy(data=request.POST, actor=request.user)
+        except DomainError as exc:
+            return _render_policy(request, _policy_form(request.POST), exc.errors)
+        messages.success(request, "Policy settings saved. They apply to new applications.")
+        return redirect("policy_edit")
+    return _render_policy(request, _policy_form(PolicyConfig.get()), {})

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Set{% else %}Edit{% endif %} balance | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">{% if mode == "create" %}Set a leave balance{% else %}Edit balance{% endif %}</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+
+<form method="post" novalidate class="card card-body" style="max-width: 560px">
+  {% csrf_token %}
+  {% if mode == "create" %}
+    {% include "partials/select.html" with name="staff" label="Staff member" options=staff_options blank="Choose a staff member" required=True %}
+    {% include "partials/select.html" with name="leave_type" label="Leave type" options=leave_type_options blank="Choose a leave type" required=True %}
+    {% include "partials/select.html" with name="academic_year" label="Academic year" options=year_options blank="Choose a year" required=True %}
+    {% include "partials/field.html" with name="total" label="Total days" required=True help="Whole or half days, from 0 to 366. For example 12 or 7.5." %}
+  {% else %}
+    <dl class="row mb-3">
+      <dt class="col-sm-4">Staff member</dt>
+      <dd class="col-sm-8">{{ balance.staff.user.get_full_name|default:balance.staff.user.get_username }} ({{ balance.staff.employee_id }})</dd>
+      <dt class="col-sm-4">Leave type</dt><dd class="col-sm-8">{{ balance.leave_type.name }} ({{ balance.leave_type.code }})</dd>
+      <dt class="col-sm-4">Academic year</dt><dd class="col-sm-8">{{ balance.academic_year.name }}</dd>
+      <dt class="col-sm-4">Used so far</dt><dd class="col-sm-8">{{ balance.used|floatformat:"-1" }} days</dd>
+    </dl>
+    {% include "partials/field.html" with name="total" label="Total days" required=True help="Can't be lower than the days already used." %}
+    {% include "partials/field.html" with name="remarks" label="Reason for the change" maxlength=300 required=True multiline=True help="Recorded in the audit log." %}
+  {% endif %}
+  <div>
+    <button class="btn btn-primary" type="submit">Save balance</button>
+    <a class="btn btn-link" href="{% url 'balance_list' %}{% if mode == 'edit' %}?year={{ balance.academic_year_id }}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

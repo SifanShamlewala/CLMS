@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Policy settings | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Policy settings</h1>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+<p class="text-muted">These settings apply to <strong>new</strong> applications. Leave days that already exist keep the classification they were given.</p>
+
+<form method="post" novalidate class="card card-body" style="max-width: 720px">
+  {% csrf_token %}
+
+  <h2 class="h6">Weekly offs</h2>
+  <p class="text-muted small">Days that never count as leave. Holidays are managed on the Holidays page.</p>
+  <div class="mb-3">
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="id_sunday" checked disabled>
+      <label class="form-check-label" for="id_sunday">Sunday</label>
+      <div class="form-text">Always off. It can’t be changed.</div>
+    </div>
+    {% for value, text, on in weekday_options %}
+      {% include "partials/checkbox.html" with name="weekly_off_days" value=value label=text checked=on %}
+    {% endfor %}
+    {% if errors.weekly_off_days %}<div class="text-danger small">{{ errors.weekly_off_days }}</div>{% endif %}
+  </div>
+
+  <h2 class="h6 mt-2">Leave rules</h2>
+  {% include "partials/checkbox.html" with name="allow_cross_year_leave" label="Allow leave that crosses two academic years" checked=form.allow_cross_year_leave help="Off: staff submit two applications, one per year, because balances belong to a year." %}
+  {% include "partials/checkbox.html" with name="reversal_includes_today" label="Allow reversing leave days dated today" checked=form.reversal_includes_today help="Off: only days after today can be reversed." %}
+
+  <h2 class="h6 mt-3">Approval rules</h2>
+  {% include "partials/checkbox.html" with name="principal_bypass_stages" label="Principal’s own leave is approved automatically" checked=form.principal_bypass_stages help="The workload and HOD stages are skipped. Balance, overlap checks and the audit trail still apply." %}
+  <div class="mt-3">
+    {% include "partials/select.html" with name="hod_own_leave_route" label="When a head of department applies for leave" options=route_options values=form required=True help="Skip to Principal: the head's own leave goes straight to the Principal. Principal as HOD: the Principal also acts as the HOD reviewer." %}
+  </div>
+
+  <h2 class="h6 mt-2">Balances</h2>
+  {% include "partials/checkbox.html" with name="admin_adjust_enabled" label="Allow the administrator to adjust balances after they are set" checked=form.admin_adjust_enabled help="Every adjustment needs a reason and is recorded in the audit log." %}
+
+  <div class="mt-3">
+    <button class="btn btn-primary" type="submit">Save policy</button>
+    <a class="btn btn-link" href="{% url 'dashboard' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

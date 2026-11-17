@@ -1,4 +1,4 @@
-"""Business logic for leave types, academic years and holidays."""
+"""Business logic for leave types, academic years, holidays and the policy settings."""
 import logging
 import re
 
@@ -8,11 +8,11 @@ from django.utils import timezone
 from core.lookup import parse_object
 from core.permissions import require_administrator
 from core.validation import (
-    CONFLICT_MESSAGE, DomainError, ensure_unique, optional_text, parse_date,
-    required_text, validate,
+    CONFLICT_MESSAGE, DomainError, ensure_unique, optional_text, parse_choice,
+    parse_date, required_text, validate,
 )
 
-from .models import AcademicYear, Holiday, LeaveType
+from .models import AcademicYear, Holiday, LeaveType, PolicyConfig
 
 logger = logging.getLogger("vsclms.setup")
 
@@ -261,3 +261,57 @@ def delete_holiday(*, holiday, actor):
     holiday.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
     logger.info("audit action=HOLIDAY_DELETED id=%s by=%s", holiday.pk, actor.pk)
     return holiday
+
+
+# ----------------------------------------------------------------------- policy
+VALID_WEEKDAYS = {str(n) for n in range(7)}
+POLICY_FLAGS = (
+    "allow_cross_year_leave", "reversal_includes_today", "principal_bypass_stages", "admin_adjust_enabled",
+)
+
+
+def _getlist(data, key):
+    """Read several values for one key from request.POST or from a plain dict."""
+    if hasattr(data, "getlist"):
+        return data.getlist(key)
+    value = data.get(key) or []
+    return [value] if isinstance(value, str) else list(value)
+
+
+def _off_days(values):
+    """Turn posted weekday numbers into the stored text, always including Sunday."""
+    days = set()
+    for value in values:
+        value = (value or "").strip()
+        if value not in VALID_WEEKDAYS:
+            raise DomainError({"weekly_off_days": "Choose valid weekdays."})
+        days.add(int(value))
+    days.add(6)  # Sunday is always off
+    if len(days) == 7:
+        raise DomainError({"weekly_off_days": "At least one weekday must stay a working day."})
+    return ",".join(str(day) for day in sorted(days))
+
+
+def update_policy(*, data, actor):
+    """Save the single policy row. Unticked checkboxes arrive as missing keys, so
+    every flag is read as "on" or off. Changes affect NEW applications only:
+    leave days already created keep the classification they were given."""
+    require_administrator(actor)
+    cleaned = validate({
+        "weekly_off_days": lambda: _off_days(_getlist(data, "weekly_off_days")),
+        "hod_own_leave_route": lambda: parse_choice(
+            data.get("hod_own_leave_route"), "hod_own_leave_route",
+            PolicyConfig.HodOwnLeaveRoute.values, "route",
+        ),
+    })
+    for flag in POLICY_FLAGS:
+        cleaned[flag] = data.get(flag) == "on"
+    with transaction.atomic():
+        policy = PolicyConfig.get()
+        before = {field: getattr(policy, field) for field in cleaned}
+        for field, value in cleaned.items():
+            setattr(policy, field, value)
+        policy.save()
+    changed = {f: (before[f], cleaned[f]) for f in cleaned if before[f] != cleaned[f]}
+    logger.info("audit action=POLICY_UPDATED changed=%s by=%s", changed or "nothing", actor.pk)
+    return policy

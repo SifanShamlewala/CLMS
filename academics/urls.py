@@ -18,4 +18,6 @@ urlpatterns = [
     path("setup/holidays/new/", views.holiday_create, name="holiday_create"),
     path("setup/holidays/<int:pk>/edit/", views.holiday_edit, name="holiday_edit"),
     path("setup/holidays/<int:pk>/delete/", views.holiday_delete, name="holiday_delete"),
+    # Policy
+    path("setup/policy/", views.policy_edit, name="policy_edit"),
 ]

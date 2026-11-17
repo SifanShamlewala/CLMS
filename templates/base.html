@@ -36,6 +36,14 @@
         <a class="nav-link {% if 'holiday' in request.resolver_match.url_name %}active{% endif %}"
            href="{% url 'holiday_list' %}">Holidays</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link {% if 'balance' in request.resolver_match.url_name %}active{% endif %}"
+           href="{% url 'balance_list' %}">Balances</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if 'policy' in request.resolver_match.url_name %}active{% endif %}"
+           href="{% url 'policy_edit' %}">Policy</a>
+      </li>
     </ul>
     {% else %}
     <div class="me-auto"></div>

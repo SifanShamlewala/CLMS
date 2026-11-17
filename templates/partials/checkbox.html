@@ -1,0 +1,16 @@
+{% load form_tags %}
+{% comment %}
+One checkbox. An unticked box sends nothing, so the server reads a missing key as "off".
+Parameters: name, label, value (default "on"; give one when several boxes share a name),
+checked, disabled, help. Reads `errors` from the page.
+{% endcomment %}
+{% with err=errors|get_item:name %}
+<div class="form-check mb-2">
+  <input class="form-check-input{% if err %} is-invalid{% endif %}" type="checkbox"
+         id="id_{{ name }}{% if value %}_{{ value }}{% endif %}" name="{{ name }}" value="{{ value|default:'on' }}"
+         {% if checked %}checked{% endif %} {% if disabled %}disabled{% endif %}>
+  <label class="form-check-label" for="id_{{ name }}{% if value %}_{{ value }}{% endif %}">{{ label }}</label>
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+  {% if err %}<div class="invalid-feedback d-block">{{ err }}</div>{% endif %}
+</div>
+{% endwith %}
