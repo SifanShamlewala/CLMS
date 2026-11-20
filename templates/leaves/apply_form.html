@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Apply for leave | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Apply for leave</h1>
+
+{% if blocker %}
+<div class="alert alert-warning" role="alert">{{ blocker }}</div>
+{% else %}
+<p class="text-muted">Academic year {{ year.name }} ({{ year.start_date|date:"d M Y" }} to {{ year.end_date|date:"d M Y" }}). Past and future dates follow the same approval steps. You will see every date before anything is saved.</p>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+{% if errors.day_parts %}<div class="alert alert-danger" role="alert">{{ errors.day_parts }}</div>{% endif %}
+
+<form method="post" novalidate class="card card-body" style="max-width: 640px">
+  {% csrf_token %}
+  <input type="hidden" name="step" value="preview">
+  {% include "partials/select.html" with name="leave_type" label="Leave type" options=leave_type_options blank="Choose a leave type" required=True %}
+  <div class="row">
+    <div class="col-md-6">{% include "partials/field.html" with name="start_date" label="From" type="date" required=True %}</div>
+    <div class="col-md-6">{% include "partials/field.html" with name="end_date" label="To" type="date" required=True help="Include the last day of leave." %}</div>
+  </div>
+  {% include "partials/field.html" with name="reason" label="Reason" maxlength=500 required=True multiline=True %}
+  {% if is_principal %}
+    <p class="text-muted small">Your own leave skips the workload and head-of-department stages.</p>
+  {% else %}
+    {% include "partials/checkbox.html" with name="requires_workload" label="My duties need to be covered by colleagues" checked=values.requires_workload help="Ticked: colleagues are asked to accept your workload before review. Unticked: your application goes straight to review." %}
+  {% endif %}
+  <div class="mt-2">
+    <button class="btn btn-primary" type="submit">Preview days</button>
+    <a class="btn btn-link" href="{% url 'leave_mine' %}">Cancel</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

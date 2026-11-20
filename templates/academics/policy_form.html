@@ -23,7 +23,7 @@
   </div>
 
   <h2 class="h6 mt-2">Leave rules</h2>
-  {% include "partials/checkbox.html" with name="allow_cross_year_leave" label="Allow leave that crosses two academic years" checked=form.allow_cross_year_leave help="Off: staff submit two applications, one per year, because balances belong to a year." %}
+  {% include "partials/checkbox.html" with name="allow_cross_year_leave" label="Allow leave that crosses two academic years (not available yet)" checked=form.allow_cross_year_leave help="Saved for later. For now every application must fall inside the active academic year, because balances belong to a year." %}
   {% include "partials/checkbox.html" with name="reversal_includes_today" label="Allow reversing leave days dated today" checked=form.reversal_includes_today help="Off: only days after today can be reversed." %}
 
   <h2 class="h6 mt-3">Approval rules</h2>

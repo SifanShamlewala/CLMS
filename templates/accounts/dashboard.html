@@ -10,6 +10,14 @@
   <div class="alert alert-warning" role="alert">Your account has no staff profile yet. Ask the administrator to set one up.</div>
 {% endif %}
 
+{% if profile %}
+<h2 class="h6 mt-4">Leave</h2>
+<div class="list-group mb-3" style="max-width: 420px">
+  <a class="list-group-item list-group-item-action" href="{% url 'leave_apply' %}">Apply for leave</a>
+  <a class="list-group-item list-group-item-action" href="{% url 'leave_mine' %}">My leaves</a>
+</div>
+{% endif %}
+
 {% if is_administrator %}
 <h2 class="h6 mt-4">Setup</h2>
 <div class="list-group" style="max-width: 420px">

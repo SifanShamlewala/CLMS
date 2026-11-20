@@ -10,6 +10,18 @@
 <nav class="navbar navbar-expand navbar-dark bg-dark px-3 flex-wrap">
   <a class="navbar-brand" href="{% url 'dashboard' %}">VSCLMS</a>
   {% if user.is_authenticated %}
+    {% if profile %}
+    <ul class="navbar-nav flex-wrap">
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'leave_apply' %}active{% endif %}"
+           href="{% url 'leave_apply' %}">Apply for leave</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'leave_mine' or request.resolver_match.url_name == 'leave_detail' %}active{% endif %}"
+           href="{% url 'leave_mine' %}">My leaves</a>
+      </li>
+    </ul>
+    {% endif %}
     {% if is_administrator %}
     <ul class="navbar-nav me-auto flex-wrap">
       <li class="nav-item">

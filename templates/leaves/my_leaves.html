@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}My leaves | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">My leaves</h1>
+  <a class="btn btn-primary" href="{% url 'leave_apply' %}">Apply for leave</a>
+</div>
+
+{% if active_year %}
+<div class="card card-body mb-3" style="max-width: 760px">
+  <h2 class="h6">My balances in {{ active_year.name }}</h2>
+  {% if balances %}
+  <table class="table table-sm mb-0">
+    <thead><tr><th>Leave type</th><th class="text-end">Total</th><th class="text-end">Used</th><th class="text-end">Remaining</th></tr></thead>
+    <tbody>
+    {% for b in balances %}
+      <tr><td>{{ b.leave_type.name }} <code>{{ b.leave_type.code }}</code></td>
+          <td class="text-end">{{ b.total|floatformat:"-1" }}</td>
+          <td class="text-end">{{ b.used|floatformat:"-1" }}</td>
+          <td class="text-end"><strong>{{ b.remaining|floatformat:"-1" }}</strong></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted mb-0">No balances are set for you yet, so leave you apply for is without pay until the administrator sets one.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<form method="get" class="card card-body mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">{% include "partials/select.html" with name="status" label="Status" options=status_options blank="All statuses" values=filters errors=None %}</div>
+    <div class="col-md-4">{% include "partials/select.html" with name="year" label="Academic year" options=year_options blank="All years" values=filters errors=None %}</div>
+    <div class="col-md-2 mb-3"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white border">
+    <thead class="table-light">
+      <tr><th>#</th><th>Leave type</th><th>Dates</th><th class="text-end">Counted</th><th class="text-end">Paid</th><th class="text-end">Without pay</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for a in page_obj %}
+      <tr>
+        <td>{{ a.pk }}</td>
+        <td>{{ a.leave_type.name }} <code>{{ a.leave_type.code }}</code></td>
+        <td>{{ a.start_date|date:"d M Y" }}{% if a.end_date != a.start_date %} to {{ a.end_date|date:"d M Y" }}{% endif %}</td>
+        <td class="text-end">{{ a.counted|floatformat:"-1" }}</td>
+        <td class="text-end">{{ a.paid|floatformat:"-1" }}</td>
+        <td class="text-end">{{ a.lwp|floatformat:"-1" }}</td>
+        <td>{% include "partials/leave_status.html" with status=a.status label=a.get_status_display %}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'leave_detail' a.pk %}">View</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/pagination.html" %}
+{% else %}
+<div class="card card-body text-center py-5">
+  {% if has_filters %}
+  <p class="mb-3">No applications match these filters.</p>
+  <div><a class="btn btn-outline-primary" href="{% url 'leave_mine' %}">Clear filters</a></div>
+  {% else %}
+  <p class="mb-3">You haven’t applied for leave yet.</p>
+  <div><a class="btn btn-primary" href="{% url 'leave_apply' %}">Apply for leave</a></div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

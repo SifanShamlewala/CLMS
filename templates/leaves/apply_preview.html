@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Check your leave | VSCLMS{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Check your leave</h1>
+<p class="text-muted">Nothing is saved yet. The paid and unpaid split below is an estimate; it is worked out again when the Principal gives the final approval.</p>
+
+{% for warning in preview.warnings %}
+<div class="alert alert-info" role="alert">{{ warning }}</div>
+{% endfor %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="leave_type" value="{{ preview.leave_type.pk }}">
+  <input type="hidden" name="start_date" value="{{ preview.start|date:'Y-m-d' }}">
+  <input type="hidden" name="end_date" value="{{ preview.end|date:'Y-m-d' }}">
+  <textarea name="reason" class="d-none" aria-hidden="true">{{ preview.reason }}</textarea>
+  {% if preview.requires_workload %}<input type="hidden" name="requires_workload" value="on">{% endif %}
+
+  <div class="card card-body mb-3" style="max-width: 760px">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Leave type</dt><dd class="col-sm-9">{{ preview.leave_type.name }} ({{ preview.leave_type.code }})</dd>
+      <dt class="col-sm-3">Dates</dt><dd class="col-sm-9">{{ preview.start|date:"D, d M Y" }} to {{ preview.end|date:"D, d M Y" }}</dd>
+      <dt class="col-sm-3">Reason</dt><dd class="col-sm-9">{{ preview.reason|linebreaksbr }}</dd>
+      <dt class="col-sm-3">Workload cover</dt><dd class="col-sm-9">{% if preview.requires_workload %}Needed. Colleagues will be asked to accept your duties.{% else %}Not needed.{% endif %}</dd>
+      <dt class="col-sm-3">Your {{ preview.leave_type.code }} balance</dt>
+      <dd class="col-sm-9">{% if preview.has_balance %}{{ preview.available|floatformat:"-1" }} days left{% else %}No balance set (treated as 0){% endif %}</dd>
+    </dl>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle bg-white border" style="max-width: 760px">
+      <thead class="table-light"><tr><th>Date</th><th>What it is</th><th>Day</th><th>Result</th></tr></thead>
+      <tbody>
+      {% for row in preview.rows %}
+        <tr{% if row.result == "NOT_COUNTED" %} class="text-muted"{% endif %}>
+          <td>{{ row.plan.date|date:"D, d M Y" }}</td>
+          <td>{{ row.kind }}</td>
+          <td>
+            {% if row.plan.is_counted %}
+            <select name="part_{{ row.iso }}" class="form-select form-select-sm" aria-label="Day part for {{ row.iso }}">
+              {% for value, label in part_options %}
+              <option value="{{ value }}"{% if value == row.plan.day_part %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% else %}Not applicable{% endif %}
+          </td>
+          <td>
+            {% if row.result == "PAID" %}<span class="badge text-bg-success">Paid</span>
+            {% elif row.result == "LWP" %}<span class="badge text-bg-warning">Leave without pay</span>
+            {% else %}<span class="badge text-bg-secondary">Not counted</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card-body mb-3" style="max-width: 760px">
+    <div class="row text-center">
+      <div class="col"><div class="text-muted small">Days counted</div><div class="h5 mb-0">{{ preview.summary.counted|floatformat:"-1" }}</div></div>
+      <div class="col"><div class="text-muted small">Paid</div><div class="h5 mb-0">{{ preview.summary.paid|floatformat:"-1" }}</div></div>
+      <div class="col"><div class="text-muted small">Leave without pay</div><div class="h5 mb-0">{{ preview.summary.lwp|floatformat:"-1" }}</div></div>
+    </div>
+  </div>
+  <p class="text-muted small">After you submit, the application starts as <strong>{{ preview.status_label }}</strong>. Changed a day to a half day? Choose “Update preview” to see the new totals first.</p>
+
+  <button class="btn btn-primary" type="submit" name="step" value="submit">Submit application</button>
+  <button class="btn btn-outline-secondary" type="submit" name="step" value="preview">Update preview</button>
+  <button class="btn btn-link" type="submit" name="step" value="edit">Edit details</button>
+</form>
+{% endblock %}

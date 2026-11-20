@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Leave #{{ application.pk }} | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Leave application #{{ application.pk }}
+    {% include "partials/leave_status.html" with status=application.status label=application.get_status_display %}
+  </h1>
+  {% if is_owner %}<a class="btn btn-outline-secondary" href="{% url 'leave_mine' %}">My leaves</a>{% endif %}
+</div>
+<p class="text-muted">{{ next_step }}</p>
+
+<div class="card card-body mb-3" style="max-width: 760px">
+  <dl class="row mb-0">
+    <dt class="col-sm-3">Applicant</dt>
+    <dd class="col-sm-9">{{ application.applicant.user.get_full_name|default:application.applicant.user.get_username }}, {{ application.applicant.department.name }}</dd>
+    <dt class="col-sm-3">Leave type</dt><dd class="col-sm-9">{{ application.leave_type.name }} ({{ application.leave_type.code }})</dd>
+    <dt class="col-sm-3">Dates</dt><dd class="col-sm-9">{{ application.start_date|date:"D, d M Y" }} to {{ application.end_date|date:"D, d M Y" }}</dd>
+    <dt class="col-sm-3">Academic year</dt><dd class="col-sm-9">{{ application.academic_year.name }}</dd>
+    <dt class="col-sm-3">Reason</dt><dd class="col-sm-9">{{ application.reason|linebreaksbr }}</dd>
+    <dt class="col-sm-3">Workload cover</dt><dd class="col-sm-9">{% if application.requires_workload %}Needed{% else %}Not needed{% endif %}</dd>
+    <dt class="col-sm-3">Submitted</dt><dd class="col-sm-9">{{ application.submitted_at|date:"d M Y, H:i" }}</dd>
+    <dt class="col-sm-3">Balance at submission</dt><dd class="col-sm-9">{% if application.balance_before is not None %}{{ application.balance_before|floatformat:"-1" }} days{% else %}Not recorded{% endif %}</dd>
+  </dl>
+</div>
+
+<div class="card card-body mb-3" style="max-width: 760px">
+  <div class="row text-center">
+    <div class="col"><div class="text-muted small">Days counted</div><div class="h5 mb-0">{{ totals.counted|floatformat:"-1" }}</div></div>
+    <div class="col"><div class="text-muted small">Paid</div><div class="h5 mb-0">{{ totals.paid|floatformat:"-1" }}</div></div>
+    <div class="col"><div class="text-muted small">Leave without pay</div><div class="h5 mb-0">{{ totals.lwp|floatformat:"-1" }}</div></div>
+  </div>
+  <p class="text-muted small mt-2 mb-0">Totals are added up from the day rows below. Until the final approval, the paid and unpaid split is an estimate.</p>
+</div>
+
+<div class="table-responsive">
+  <table class="table align-middle bg-white border" style="max-width: 760px">
+    <thead class="table-light"><tr><th>Date</th><th>What it is</th><th>Day</th><th>Result</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for d in days %}
+      <tr{% if not d.is_counted %} class="text-muted"{% endif %}>
+        <td>{{ d.date|date:"D, d M Y" }}</td>
+        <td>{% if d.is_holiday %}Holiday{% if d.holiday %}: {{ d.holiday.name }}{% endif %}{% elif d.is_sunday %}Sunday{% elif not d.is_working_day %}Weekly off{% else %}Working day{% endif %}</td>
+        <td>{% if d.is_counted %}{{ d.get_day_part_display }}{% else %}Not applicable{% endif %}</td>
+        <td>
+          {% if not d.is_counted %}<span class="badge text-bg-secondary">Not counted</span>
+          {% elif d.is_lwp %}<span class="badge text-bg-warning">Leave without pay</span>
+          {% else %}<span class="badge text-bg-success">Paid</span>{% endif %}
+        </td>
+        <td>{{ d.get_status_display }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,5 @@
+{% comment %}Coloured badge for an application status. Parameter: status (the stored value), label.{% endcomment %}
+{% if status == "APPROVED" %}<span class="badge text-bg-success">{{ label }}</span>
+{% elif status == "REJECTED" %}<span class="badge text-bg-danger">{{ label }}</span>
+{% elif status == "CANCELLED" %}<span class="badge text-bg-secondary">{{ label }}</span>
+{% else %}<span class="badge text-bg-warning">{{ label }}</span>{% endif %}
