@@ -1,0 +1,64 @@
+{% load form_tags %}
+{% comment %}Workload cover on the leave detail page. Needs: cover (dates, required, covered, can_arrange,
+assignee_options), application, is_owner, errors, values.{% endcomment %}
+<h2 class="h5 mt-4">Workload cover</h2>
+<p class="text-muted">
+  {{ cover.covered }} of {{ cover.required }} date{{ cover.required|pluralize }} covered and accepted.
+  Every date needs at least one colleague, and everyone asked must accept. If anyone rejects, the leave is rejected.
+</p>
+{% if errors.form %}<div class="alert alert-danger" role="alert">{{ errors.form }}</div>{% endif %}
+
+<div class="table-responsive">
+  <table class="table align-middle bg-white border" style="max-width: 760px">
+    <thead class="table-light"><tr><th>Date</th><th>Covered by</th></tr></thead>
+    <tbody>
+    {% for item in cover.dates %}
+      <tr>
+        <td>{{ item.day.date|date:"D, d M Y" }}{% if item.day.day_part != "FULL" %} <span class="text-muted small">({{ item.day.get_day_part_display }})</span>{% endif %}</td>
+        <td>
+          {% for w in item.assignments %}
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <span>{{ w.assigned_staff.user.get_full_name|default:w.assigned_staff.user.get_username }}
+              <span class="text-muted small">({{ w.assigned_staff.department.name }})</span></span>
+            {% if w.status == "ACCEPTED" %}<span class="badge text-bg-success">{{ w.get_status_display }}</span>
+            {% elif w.status == "REJECTED" %}<span class="badge text-bg-danger">{{ w.get_status_display }}</span>
+            {% elif w.status == "PENDING" %}<span class="badge text-bg-warning">{{ w.get_status_display }}</span>
+            {% else %}<span class="badge text-bg-secondary">{{ w.get_status_display }}</span>{% endif %}
+            {% if w.remarks %}<span class="small text-muted">“{{ w.remarks }}”</span>{% endif %}
+            {% if cover.can_arrange and w.status == "PENDING" %}
+            <form method="post" action="{% url 'workload_remove' w.pk %}" class="mb-0">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-outline-secondary" type="submit">Withdraw</button>
+            </form>
+            {% endif %}
+          </div>
+          {% empty %}
+          <span class="text-muted">Nobody asked yet</span>
+          {% endfor %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if cover.can_arrange %}
+<div class="card card-body mb-4" style="max-width: 760px">
+  <h3 class="h6">Ask a colleague to cover</h3>
+  <form method="post" action="{% url 'workload_assign' application.pk %}" novalidate>
+    {% csrf_token %}
+    {% include "partials/select.html" with name="assignee" label="Colleague" options=cover.assignee_options blank="Choose a colleague" required=True %}
+    <div class="mb-3">
+      <div class="form-label">Dates they will cover <span class="text-danger" aria-hidden="true">*</span></div>
+      {% for item in cover.dates %}
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="dates" value="{{ item.day.date|date:'Y-m-d' }}" id="id_dates_{{ item.day.date|date:'Y-m-d' }}"{% if item.checked %} checked{% endif %}>
+        <label class="form-check-label" for="id_dates_{{ item.day.date|date:'Y-m-d' }}">{{ item.day.date|date:"D, d M Y" }}</label>
+      </div>
+      {% endfor %}
+      {% with err=errors|get_item:"dates" %}{% if err %}<div class="text-danger small mt-1">{{ err }}</div>{% endif %}{% endwith %}
+    </div>
+    <button class="btn btn-primary" type="submit">Ask for cover</button>
+  </form>
+</div>
+{% endif %}

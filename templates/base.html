@@ -20,6 +20,10 @@
         <a class="nav-link {% if request.resolver_match.url_name == 'leave_mine' or request.resolver_match.url_name == 'leave_detail' %}active{% endif %}"
            href="{% url 'leave_mine' %}">My leaves</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'workload_inbox' %}active{% endif %}"
+           href="{% url 'workload_inbox' %}">Workload</a>
+      </li>
     </ul>
     {% endif %}
     {% if is_administrator %}

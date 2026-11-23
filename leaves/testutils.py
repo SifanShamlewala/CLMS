@@ -63,3 +63,31 @@ class LeaveTestCase(TestCase):
     def sign_in(self, profile):
         self.client.logout()
         login(self.client, profile.user)
+
+
+class WorkloadTestCase(LeaveTestCase):
+    """Adds two Physics colleagues (Ben, Chitra) and helpers to apply and arrange cover."""
+
+    def setUp(self):
+        super().setUp()
+        self.ben = make_staff("ben", self.physics)
+        self.chitra = make_staff("chitra", self.physics)
+        for profile, first in ((self.ben, "Ben"), (self.chitra, "Chitra")):
+            profile.user.first_name = first
+            profile.user.save()
+
+    def apply(self, person=None, **extra):
+        from leaves import applications
+        return applications.submit_application(user=(person or self.asha).user, data=self.payload(**extra))
+
+    def assign(self, application, colleague, days=None):
+        """Ask ``colleague`` to cover ``days`` (default: every date needing cover)."""
+        from leaves import workload
+        if days is None:
+            days = [d.date for d in application.days.filter(workload_required=True, is_counted=True)]
+        data = {"assignee": str(colleague.pk), "dates": [d.isoformat() for d in days]}
+        return workload.assign_workload(application=application, data=data, actor=application.applicant.user)
+
+    def rows(self, application, **filters):
+        from leaves.models import LeaveWorkload
+        return LeaveWorkload.objects.filter(leave_day__leave=application, **filters).order_by("date", "id")

@@ -21,6 +21,7 @@ from core.validation import DomainError, parse_date, required_text, validate
 from .day_engine import FRACTIONS, FULL, MAX_DATES, DayPlan, allocate_leave, plan_days, summarize
 from .models import LeaveApplication, LeaveDay, StaffLeaveBalance
 from .workflow import initial_status
+from .workload import cover_clash_dates
 
 logger = logging.getLogger("vsclms.leave")
 
@@ -211,6 +212,7 @@ def _prepare(profile, data):
         rows.append(PreviewRow(plan, _row_kind(plan, holidays.get(plan.date)), result, holidays.get(plan.date)))
 
     warnings = _warnings(profile, leave_type, year, balance, available, summary)
+    warnings.extend(_cover_warnings(profile, start, end))
     if profile.role == Role.PRINCIPAL:
         warnings.append("As Principal, your own leave skips the workload and head-of-department stages.")
     return Preview(
@@ -251,6 +253,20 @@ def _warnings(profile, leave_type, year, balance, available, summary):
             "Nothing is deducted until a final approval, so this estimate ignores them."
         )
     return warnings
+
+
+def _cover_warnings(profile, start, end):
+    """Not a block: the applicant has agreed, or been asked, to cover a colleague on these dates."""
+    dates = cover_clash_dates(profile, start, end)
+    if not dates:
+        return []
+    shown = ", ".join(_fmt(d) for d in sorted(dates)[:MAX_CLASH_DATES_SHOWN])
+    extra = len(dates) - MAX_CLASH_DATES_SHOWN
+    more = f" and {extra} more" if extra > 0 else ""
+    return [
+        f"You are asked to cover a colleague's work on {shown}{more}. "
+        "If your leave is approved you won't be able to, so tell them or sort it out with the head of department."
+    ]
 
 
 # ------------------------------------------------------------------ public API

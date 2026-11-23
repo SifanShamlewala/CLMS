@@ -165,3 +165,55 @@ class LeaveDay(models.Model):
 
     def __str__(self):
         return f"{self.staff} {self.date} {self.day_part}"
+
+
+class LeaveWorkload(models.Model):
+    """One colleague covering one date of a leave (spec section 9, Day 7).
+
+    History is never erased: a withdrawn row is soft-deleted, a row retired by a
+    rejected leave becomes CANCELLED, and a later transfer keeps the old row as
+    TRANSFERRED with ``transferred_from`` pointing back to it.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Waiting for answer"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        REJECTED = "REJECTED", "Rejected"
+        TRANSFERRED = "TRANSFERRED", "Transferred"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    leave_day = models.ForeignKey(LeaveDay, on_delete=models.PROTECT, related_name="workloads")
+    assigned_staff = models.ForeignKey("accounts.StaffProfile", on_delete=models.PROTECT, related_name="workloads")
+    # Denormalised from the leave day so the inbox and the clash checks need no join.
+    date = models.DateField()
+    status = models.CharField(max_length=12, choices=Status, default=Status.PENDING)
+    remarks = models.CharField(max_length=300, blank=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="assigned_workloads",
+    )
+    transferred_from = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="transferred_to",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            # Transfer history must not collide with the live assignment, so only
+            # PENDING and ACCEPTED rows that are not removed count as active.
+            models.UniqueConstraint(
+                fields=["leave_day", "assigned_staff"],
+                condition=Q(status__in=["PENDING", "ACCEPTED"], is_deleted=False),
+                name="workload_one_active_per_person_day",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["assigned_staff", "date", "status"]),
+            models.Index(fields=["leave_day", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.assigned_staff} covers {self.date} ({self.status})"

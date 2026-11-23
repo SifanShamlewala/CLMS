@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Workload inbox | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Workload inbox</h1>
+  <span class="text-muted">{{ waiting }} waiting for your answer</span>
+</div>
+
+<form method="get" class="card card-body mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">{% include "partials/select.html" with name="status" label="Show" options=status_options blank="Everything" values=filters errors=None %}</div>
+    <div class="col-md-2 mb-3"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="table-responsive">
+  <table class="table align-middle bg-white border">
+    <thead class="table-light"><tr><th>Date</th><th>Covering for</th><th>Leave</th><th>Status</th><th style="min-width: 280px">Your answer</th></tr></thead>
+    <tbody>
+    {% for w in page_obj %}
+      <tr>
+        <td>{{ w.date|date:"D, d M Y" }}{% if w.leave_day.day_part != "FULL" %}<div class="small text-muted">{{ w.leave_day.get_day_part_display }}</div>{% endif %}</td>
+        <td>{{ w.leave.applicant.user.get_full_name|default:w.leave.applicant.user.get_username }}
+          <div class="small text-muted">{{ w.leave.applicant.department.name }}</div></td>
+        <td><a href="{% url 'leave_detail' w.leave.pk %}">#{{ w.leave.pk }}</a>
+          <div class="small text-muted">{{ w.leave.leave_type.name }}</div></td>
+        <td>
+          {% if w.status == "ACCEPTED" %}<span class="badge text-bg-success">{{ w.get_status_display }}</span>
+          {% elif w.status == "REJECTED" %}<span class="badge text-bg-danger">{{ w.get_status_display }}</span>
+          {% elif w.status == "PENDING" %}<span class="badge text-bg-warning">{{ w.get_status_display }}</span>
+          {% else %}<span class="badge text-bg-secondary">{{ w.get_status_display }}</span>{% endif %}
+          {% if w.remarks %}<div class="small text-muted">“{{ w.remarks }}”</div>{% endif %}
+        </td>
+        <td>
+          {% if w.can_answer %}
+          <form method="post" action="{% url 'workload_decide' w.pk %}" class="mb-0">
+            {% csrf_token %}
+            <input class="form-control form-control-sm mb-2" type="text" name="remarks" maxlength="300"
+                   placeholder="Remarks (required to reject)" aria-label="Remarks for {{ w.date|date:'d M' }}">
+            <button class="btn btn-sm btn-success" type="submit" name="decision" value="accept">Accept</button>
+            <button class="btn btn-sm btn-outline-danger" type="submit" name="decision" value="reject">Reject</button>
+          </form>
+          {% else %}<span class="text-muted small">No answer needed</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/pagination.html" %}
+{% else %}
+<div class="card card-body text-center py-5"><p class="mb-0">Nothing here.{% if filters.status == "PENDING" %} No one is waiting for your answer.{% endif %}</p></div>
+{% endif %}
+{% endblock %}

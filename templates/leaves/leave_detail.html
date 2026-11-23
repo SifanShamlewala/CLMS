@@ -19,10 +19,11 @@
     <dt class="col-sm-3">Reason</dt><dd class="col-sm-9">{{ application.reason|linebreaksbr }}</dd>
     <dt class="col-sm-3">Workload cover</dt><dd class="col-sm-9">{% if application.requires_workload %}Needed{% else %}Not needed{% endif %}</dd>
     <dt class="col-sm-3">Submitted</dt><dd class="col-sm-9">{{ application.submitted_at|date:"d M Y, H:i" }}</dd>
-    <dt class="col-sm-3">Balance at submission</dt><dd class="col-sm-9">{% if application.balance_before is not None %}{{ application.balance_before|floatformat:"-1" }} days{% else %}Not recorded{% endif %}</dd>
+    {% if sees_balance %}<dt class="col-sm-3">Balance at submission</dt><dd class="col-sm-9">{% if application.balance_before is not None %}{{ application.balance_before|floatformat:"-1" }} days{% else %}Not recorded{% endif %}</dd>{% endif %}
   </dl>
 </div>
 
+{% if sees_balance %}
 <div class="card card-body mb-3" style="max-width: 760px">
   <div class="row text-center">
     <div class="col"><div class="text-muted small">Days counted</div><div class="h5 mb-0">{{ totals.counted|floatformat:"-1" }}</div></div>
@@ -31,25 +32,28 @@
   </div>
   <p class="text-muted small mt-2 mb-0">Totals are added up from the day rows below. Until the final approval, the paid and unpaid split is an estimate.</p>
 </div>
+{% endif %}
 
 <div class="table-responsive">
   <table class="table align-middle bg-white border" style="max-width: 760px">
-    <thead class="table-light"><tr><th>Date</th><th>What it is</th><th>Day</th><th>Result</th><th>Status</th></tr></thead>
+    <thead class="table-light"><tr><th>Date</th><th>What it is</th><th>Day</th>{% if sees_balance %}<th>Result</th>{% endif %}<th>Status</th></tr></thead>
     <tbody>
     {% for d in days %}
       <tr{% if not d.is_counted %} class="text-muted"{% endif %}>
         <td>{{ d.date|date:"D, d M Y" }}</td>
         <td>{% if d.is_holiday %}Holiday{% if d.holiday %}: {{ d.holiday.name }}{% endif %}{% elif d.is_sunday %}Sunday{% elif not d.is_working_day %}Weekly off{% else %}Working day{% endif %}</td>
         <td>{% if d.is_counted %}{{ d.get_day_part_display }}{% else %}Not applicable{% endif %}</td>
-        <td>
+        {% if sees_balance %}<td>
           {% if not d.is_counted %}<span class="badge text-bg-secondary">Not counted</span>
           {% elif d.is_lwp %}<span class="badge text-bg-warning">Leave without pay</span>
           {% else %}<span class="badge text-bg-success">Paid</span>{% endif %}
-        </td>
+        </td>{% endif %}
         <td>{{ d.get_status_display }}</td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+
+{% if cover %}{% include "partials/workload_panel.html" %}{% endif %}
 {% endblock %}

@@ -13,9 +13,10 @@ from core.permissions import get_profile, role_required
 from core.validation import DomainError
 
 from . import applications
-from .access import can_view_application
+from . import workload
+from .access import can_see_balance_details, can_view_application
 from .applications import APPLICANT_ROLES, days_text
-from .models import LeaveApplication, LeaveDay, StaffLeaveBalance
+from .models import LeaveApplication, LeaveDay, LeaveWorkload, StaffLeaveBalance
 from .workflow import next_step_text
 
 Role = StaffProfile.Role
@@ -124,9 +125,66 @@ def leave_mine(request):
     })
 
 
+def _detail_context(request, application, errors=None, values=None):
+    days = list(application.days.select_related("holiday").order_by("date"))
+    counted = sum((d.fraction for d in days if d.is_counted), 0)
+    lwp = sum((d.fraction for d in days if d.is_counted and d.is_lwp), 0)
+    profile = get_profile(request.user)
+    is_owner = profile is not None and profile == application.applicant
+    sees_balance = can_see_balance_details(request.user, application)
+    cover = None
+    if application.requires_workload:
+        cover = _cover_context(application, days, is_owner, values or {})
+    return {
+        "application": application,
+        "days": days,
+        "totals": {"counted": counted, "lwp": lwp, "paid": counted - lwp},
+        "next_step": next_step_text(application.status),
+        "is_owner": is_owner,
+        "sees_balance": sees_balance,
+        "cover": cover,
+        "errors": errors or {},
+        "values": values or {},
+    }
+
+
+def _cover_context(application, days, is_owner, values):
+    """Dates that need cover, each with its assignments, plus the assign form's choices."""
+    rows = (
+        LeaveWorkload.objects.filter(leave_day__leave=application, is_deleted=False)
+        .select_related("assigned_staff__user", "assigned_staff__department")
+        .order_by("date", "id")
+    )
+    by_day = {}
+    for row in rows:
+        by_day.setdefault(row.leave_day_id, []).append(row)
+    needed = [d for d in days if d.workload_required and d.is_counted]
+    required_count, covered_count = workload.cover_summary(application)
+    can_arrange = is_owner and application.status == LeaveApplication.Status.WORKLOAD_PENDING
+    checked = set(values.getlist("dates")) if hasattr(values, "getlist") else set()
+    return {
+        "dates": [
+            {"day": d, "assignments": by_day.get(d.pk, []), "checked": d.date.isoformat() in checked}
+            for d in needed
+        ],
+        "required": required_count,
+        "covered": covered_count,
+        "can_arrange": can_arrange,
+        "assignee_options": [
+            (p.pk, f"{workload.person_name(p)} ({p.department.name})")
+            for p in workload.eligible_assignees(application.applicant)
+        ] if can_arrange else [],
+    }
+
+
 @login_required
 @require_http_methods(["GET"])
 def leave_detail(request, pk):
+    application = _visible_application(request, pk)
+    return render(request, "leaves/leave_detail.html", _detail_context(request, application))
+
+
+def _visible_application(request, pk):
     application = get_object_or_404(
         LeaveApplication.objects.select_related(
             "applicant__user", "applicant__department", "leave_type", "academic_year"
@@ -137,13 +195,35 @@ def leave_detail(request, pk):
     # so the page never confirms that an application exists.
     if not can_view_application(request.user, application):
         raise Http404
-    days = list(application.days.select_related("holiday").order_by("date"))
-    counted = sum((d.fraction for d in days if d.is_counted), 0)
-    lwp = sum((d.fraction for d in days if d.is_counted and d.is_lwp), 0)
-    return render(request, "leaves/leave_detail.html", {
-        "application": application,
-        "days": days,
-        "totals": {"counted": counted, "lwp": lwp, "paid": counted - lwp},
-        "next_step": next_step_text(application.status),
-        "is_owner": get_profile(request.user) == application.applicant,
-    })
+    return application
+
+
+@login_required
+@require_http_methods(["POST"])
+def workload_assign(request, pk):
+    application = _visible_application(request, pk)
+    try:
+        workload.assign_workload(application=application, data=request.POST, actor=request.user)
+    except DomainError as exc:
+        context = _detail_context(request, application, errors=exc.errors, values=request.POST)
+        return render(request, "leaves/leave_detail.html", context)
+    messages.success(request, "Cover requested. The colleague can now accept or reject it from their inbox.")
+    return redirect("leave_detail", pk=application.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def workload_remove(request, pk):
+    row = get_object_or_404(
+        LeaveWorkload.objects.select_related("leave_day__leave"), pk=pk, is_deleted=False
+    )
+    application = _visible_application(request, row.leave_day.leave_id)
+    try:
+        leave = workload.remove_workload(workload=row, actor=request.user)
+    except DomainError as exc:
+        messages.error(request, exc.message)
+        return redirect("leave_detail", pk=application.pk)
+    messages.success(request, "Request withdrawn." + (
+        f" {next_step_text(leave.status)}" if leave.status != LeaveApplication.Status.WORKLOAD_PENDING else ""
+    ))
+    return redirect("leave_detail", pk=application.pk)
