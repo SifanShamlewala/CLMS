@@ -217,3 +217,81 @@ class LeaveWorkload(models.Model):
 
     def __str__(self):
         return f"{self.assigned_staff} covers {self.date} ({self.status})"
+
+
+class AppendOnlyQuerySet(models.QuerySet):
+    """History must never be rewritten, so bulk changes are refused as well."""
+
+    def update(self, **kwargs):
+        raise RuntimeError("Approval history is append-only and cannot be updated.")
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise RuntimeError("Approval history is append-only and cannot be updated.")
+
+    def delete(self):
+        raise RuntimeError("Approval history is append-only and cannot be deleted.")
+
+
+class LeaveApprovalLog(models.Model):
+    """One row for each decision or step on a leave. Rows are only ever added.
+
+    Day 8 writes the head-of-department and Principal decisions here (with the
+    reviewer's remarks). Day 11 adds the remaining steps.
+    """
+
+    class Action(models.TextChoices):
+        # The approved audit action list (decision D17).
+        LEAVE_CREATED = "LEAVE_CREATED"
+        LEAVE_UPDATED = "LEAVE_UPDATED"
+        LEAVE_DELETED = "LEAVE_DELETED"
+        LEAVE_DAY_CREATED = "LEAVE_DAY_CREATED"
+        LEAVE_DAY_UPDATED = "LEAVE_DAY_UPDATED"
+        WORKLOAD_ASSIGNED = "WORKLOAD_ASSIGNED"
+        WORKLOAD_ACCEPTED = "WORKLOAD_ACCEPTED"
+        WORKLOAD_REJECTED = "WORKLOAD_REJECTED"
+        WORKLOAD_TRANSFERRED = "WORKLOAD_TRANSFERRED"
+        HOD_APPROVED = "HOD_APPROVED", "Head of department approved"
+        HOD_REJECTED = "HOD_REJECTED", "Head of department rejected"
+        PRINCIPAL_APPROVED = "PRINCIPAL_APPROVED", "Principal approved"
+        PRINCIPAL_REJECTED = "PRINCIPAL_REJECTED", "Principal rejected"
+        PRINCIPAL_AUTO_APPROVED = "PRINCIPAL_AUTO_APPROVED"
+        LEAVE_APPROVED = "LEAVE_APPROVED"
+        LEAVE_REJECTED = "LEAVE_REJECTED"
+        LEAVE_CANCELLED = "LEAVE_CANCELLED"
+        LEAVE_PARTIALLY_REVERSED = "LEAVE_PARTIALLY_REVERSED"
+        HOLIDAY_ADDED = "HOLIDAY_ADDED"
+        HOLIDAY_ADJUSTED = "HOLIDAY_ADJUSTED"
+        HOLIDAY_DELETED = "HOLIDAY_DELETED"
+        BALANCE_CREATED = "BALANCE_CREATED"
+        BALANCE_DEDUCTED = "BALANCE_DEDUCTED"
+        BALANCE_RESTORED = "BALANCE_RESTORED"
+        BALANCE_ADJUSTED = "BALANCE_ADJUSTED"
+        ACADEMIC_YEAR_ACTIVATED = "ACADEMIC_YEAR_ACTIVATED"
+        STAFF_ROLE_CHANGED = "STAFF_ROLE_CHANGED"
+
+    leave = models.ForeignKey(LeaveApplication, on_delete=models.PROTECT, related_name="approval_logs")
+    action_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="leave_approval_logs",
+    )
+    action = models.CharField(max_length=30, choices=Action)
+    remarks = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)  # in the spec; nothing sets it
+
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        indexes = [models.Index(fields=["leave", "created_at"])]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise RuntimeError("Approval history is append-only and cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise RuntimeError("Approval history is append-only and cannot be deleted.")
+
+    def __str__(self):
+        return f"{self.action} on leave {self.leave_id}"

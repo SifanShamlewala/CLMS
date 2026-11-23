@@ -1,0 +1,10 @@
+{% comment %}Approve / reject controls. Needs: leave (pk), stage, can_approve, from_page ("detail" or "queue").{% endcomment %}
+<form method="post" action="{% url 'leave_decide' leave.pk %}" class="mb-0">
+  {% csrf_token %}
+  <input type="hidden" name="from" value="{{ from_page }}">
+  <input class="form-control form-control-sm mb-2" type="text" name="remarks" maxlength="300"
+         placeholder="{% if can_approve %}Remarks (required to reject){% else %}Remarks (required){% endif %}"
+         aria-label="Remarks for leave {{ leave.pk }}">
+  {% if can_approve %}<button class="btn btn-sm btn-success" type="submit" name="decision" value="approve">Approve</button>{% endif %}
+  <button class="btn btn-sm btn-outline-danger" type="submit" name="decision" value="reject">Reject</button>
+</form>

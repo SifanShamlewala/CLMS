@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Principal queue | VSCLMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Leave to decide</h1>
+  <span class="text-muted">{{ waiting }} waiting for you</span>
+</div>
+
+<div class="alert alert-info" role="alert">
+  Final approval, which deducts the balance, is not available yet. For now you can reject a leave, or approve a head's own leave at the first stage.
+</div>
+
+<form method="get" class="card card-body mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">{% include "partials/select.html" with name="status" label="Show" options=status_options blank="Everything" values=filters errors=None %}</div>
+    <div class="col-md-2 mb-3"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="table-responsive">
+  <table class="table align-middle bg-white border">
+    <thead class="table-light"><tr><th>Staff</th><th>Leave</th><th>Dates</th><th>If approved now</th><th>Status</th><th style="min-width: 260px">Decision</th></tr></thead>
+    <tbody>
+    {% for l in page_obj %}
+      <tr>
+        <td>{{ l.applicant.user.get_full_name|default:l.applicant.user.get_username }}
+          <div class="small text-muted">{{ l.applicant.department.name }}, {{ l.applicant.get_role_display }}</div></td>
+        <td><a href="{% url 'leave_detail' l.pk %}">#{{ l.pk }}</a> <span class="text-muted small">{{ l.leave_type.name }}</span>
+          <div class="small text-muted">{{ l.reason|truncatechars:60 }}</div></td>
+        <td>{{ l.start_date|date:"d M" }} to {{ l.end_date|date:"d M Y" }}</td>
+        <td style="min-width: 220px">
+          {% if l.effect %}{% include "partials/final_effect.html" with effect=l.effect %}
+          {% else %}<span class="text-muted small">{{ l.total_days_counted|floatformat:"-1" }} days counted</span>{% endif %}
+        </td>
+        <td>{% include "partials/leave_status.html" with status=l.status label=l.get_status_display %}
+          {% if l.stage == "HOD" %}<div class="small text-muted">Acting as head of department</div>{% endif %}</td>
+        <td>
+          {% if l.stage == "HOD" %}
+            {% include "partials/decision_form.html" with leave=l stage=l.stage can_approve=True from_page="queue" %}
+          {% elif l.stage == "PRINCIPAL" %}
+            {% include "partials/decision_form.html" with leave=l stage=l.stage can_approve=False from_page="queue" %}
+          {% else %}<a class="small" href="{% url 'leave_detail' l.pk %}">Open</a>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/pagination.html" %}
+{% else %}
+<div class="card card-body text-center py-5"><p class="mb-0">Nothing here.{% if filters.status == "WAITING" %} No leave is waiting for you.{% endif %}</p></div>
+{% endif %}
+{% endblock %}

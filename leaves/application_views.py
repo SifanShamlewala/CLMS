@@ -13,7 +13,7 @@ from core.permissions import get_profile, role_required
 from core.validation import DomainError
 
 from . import applications
-from . import workload
+from . import approvals, workload
 from .access import can_see_balance_details, can_view_application
 from .applications import APPLICANT_ROLES, days_text
 from .models import LeaveApplication, LeaveDay, LeaveWorkload, StaffLeaveBalance
@@ -135,9 +135,16 @@ def _detail_context(request, application, errors=None, values=None):
     cover = None
     if application.requires_workload:
         cover = _cover_context(application, days, is_owner, values or {})
+    stage = approvals.stage_for(profile, application) if profile is not None else None
     return {
         "application": application,
         "days": days,
+        # The same people who may see the balance may read the reviewers' remarks.
+        "sees_review": sees_balance,
+        "approval_logs": list(application.approval_logs.select_related("action_by")) if sees_balance else [],
+        "decision_stage": stage,
+        "can_approve_now": stage == approvals.HOD_STAGE,
+        "effect": approvals.final_effect(application) if stage == approvals.PRINCIPAL_STAGE else None,
         "totals": {"counted": counted, "lwp": lwp, "paid": counted - lwp},
         "next_step": next_step_text(application.status),
         "is_owner": is_owner,

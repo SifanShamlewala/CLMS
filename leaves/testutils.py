@@ -91,3 +91,29 @@ class WorkloadTestCase(LeaveTestCase):
     def rows(self, application, **filters):
         from leaves.models import LeaveWorkload
         return LeaveWorkload.objects.filter(leave_day__leave=application, **filters).order_by("date", "id")
+
+
+class ApprovalTestCase(WorkloadTestCase):
+    """Helpers to put a leave at the head's or the Principal's stage and to decide it."""
+
+    def pending_hod(self, person=None, **extra):
+        """A staff leave that needs no cover, so it starts waiting for the head."""
+        return self.apply(person, requires_workload="", **extra)
+
+    def pending_principal(self, person=None, **extra):
+        from leaves import approvals
+        leave = self.pending_hod(person, **extra)
+        head = leave.applicant.department.hod
+        return approvals.decide_leave(application=leave, decision="approve", remarks="", actor=head.user)
+
+    def decide(self, leave, person, decision, remarks=""):
+        from leaves import approvals
+        return approvals.decide_leave(application=leave, decision=decision, remarks=remarks, actor=person.user)
+
+    def logs(self, leave):
+        from leaves.models import LeaveApprovalLog
+        return list(LeaveApprovalLog.objects.filter(leave=leave).values_list("action", flat=True))
+
+    def refreshed(self, leave):
+        leave.refresh_from_db()
+        return leave

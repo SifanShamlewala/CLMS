@@ -16,6 +16,8 @@
   <a class="list-group-item list-group-item-action" href="{% url 'leave_apply' %}">Apply for leave</a>
   <a class="list-group-item list-group-item-action" href="{% url 'leave_mine' %}">My leaves</a>
   <a class="list-group-item list-group-item-action" href="{% url 'workload_inbox' %}">Workload inbox</a>
+  {% if profile.role == "HOD" %}<a class="list-group-item list-group-item-action" href="{% url 'hod_queue' %}">HOD queue</a>{% endif %}
+  {% if profile.role == "PRINCIPAL" %}<a class="list-group-item list-group-item-action" href="{% url 'principal_queue' %}">Principal queue</a>{% endif %}
 </div>
 {% endif %}
 

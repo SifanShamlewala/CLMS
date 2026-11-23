@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import application_views, views, workload_views
+from . import application_views, approval_views, views, workload_views
 
 urlpatterns = [
     # Setup: balances
@@ -16,4 +16,8 @@ urlpatterns = [
     path("workload/", workload_views.workload_inbox, name="workload_inbox"),
     path("workload/<int:pk>/decide/", workload_views.workload_decide, name="workload_decide"),
     path("workload/<int:pk>/remove/", application_views.workload_remove, name="workload_remove"),
+    # Review queues and decisions
+    path("hod/", approval_views.hod_queue, name="hod_queue"),
+    path("principal/", approval_views.principal_queue, name="principal_queue"),
+    path("leaves/<int:pk>/decide/", approval_views.leave_decide, name="leave_decide"),
 ]

@@ -24,6 +24,17 @@
         <a class="nav-link {% if request.resolver_match.url_name == 'workload_inbox' %}active{% endif %}"
            href="{% url 'workload_inbox' %}">Workload</a>
       </li>
+      {% if profile.role == "HOD" %}
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'hod_queue' %}active{% endif %}"
+           href="{% url 'hod_queue' %}">HOD queue</a>
+      </li>
+      {% elif profile.role == "PRINCIPAL" %}
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'principal_queue' %}active{% endif %}"
+           href="{% url 'principal_queue' %}">Principal queue</a>
+      </li>
+      {% endif %}
     </ul>
     {% endif %}
     {% if is_administrator %}

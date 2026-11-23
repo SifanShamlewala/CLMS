@@ -118,7 +118,7 @@ def cover_summary(leave):
     return len(required), covered
 
 
-def _lock_leave(leave_id):
+def lock_leave(leave_id):
     return LeaveApplication.objects.select_for_update().select_related("applicant__user").get(pk=leave_id)
 
 
@@ -146,7 +146,7 @@ def assign_workload(*, application, data, actor):
     profile = get_profile(actor)
     try:
         with transaction.atomic():
-            leave = _lock_leave(application.pk)
+            leave = lock_leave(application.pk)
             if leave.applicant_id != profile.pk:
                 raise PermissionDenied  # only the applicant arranges cover
             _check_open(leave)
@@ -216,7 +216,7 @@ def remove_workload(*, workload, actor):
     profile = get_profile(actor)
     with transaction.atomic():
         leave_id = LeaveWorkload.objects.select_related("leave_day").get(pk=workload.pk).leave_day.leave_id
-        leave = _lock_leave(leave_id)
+        leave = lock_leave(leave_id)
         row = LeaveWorkload.objects.select_for_update().get(pk=workload.pk)
         if leave.applicant_id != profile.pk:
             raise PermissionDenied
@@ -239,7 +239,7 @@ def decide_workload(*, workload, decision, remarks, actor):
     profile = get_profile(actor)
     with transaction.atomic():
         leave_id = LeaveWorkload.objects.select_related("leave_day").get(pk=workload.pk).leave_day.leave_id
-        leave = _lock_leave(leave_id)
+        leave = lock_leave(leave_id)
         row = LeaveWorkload.objects.select_for_update().get(pk=workload.pk)
         if row.assigned_staff_id != profile.pk:
             raise PermissionDenied  # only the person asked can answer
@@ -274,13 +274,23 @@ def _reject(row, leave, remarks, now):
     text = required_text(remarks, "remarks", MAX_REMARKS, "Remarks")
     row.status, row.remarks, row.decided_at = WStatus.REJECTED, text, now
     row.save(update_fields=["status", "remarks", "decided_at"])
-    # Decision D11: any rejection rejects the leave. Its dates are free again, and the
-    # other open requests are closed but kept.
+    # Decision D11: any rejection rejects the leave.
+    reject_leave(leave, now, keep=row)
+    logger.info("audit action=WORKLOAD_REJECTED leave=%s workload=%s by=%s", leave.pk, row.pk, row.assigned_staff.user_id)
+    logger.info("audit action=LEAVE_REJECTED id=%s reason=workload_rejected", leave.pk)
+
+
+def reject_leave(leave, now, keep=None):
+    """Close a leave as REJECTED, whoever rejected it (a colleague, the head or the Principal).
+
+    Its dates are free again (days REJECTED, no longer blocking overlap) and every
+    open cover request is cancelled but kept as history. ``keep`` is a request that
+    must not be touched because the caller has just set it itself.
+    """
     leave.status, leave.decided_at = Status.REJECTED, now
     leave.save(update_fields=["status", "decided_at", "updated_at"])
     leave.days.update(status=LeaveDay.Status.REJECTED, blocks_overlap=False)
-    active_workloads().filter(leave_day__leave=leave).exclude(pk=row.pk).update(
-        status=WStatus.CANCELLED, decided_at=now
-    )
-    logger.info("audit action=WORKLOAD_REJECTED leave=%s workload=%s by=%s", leave.pk, row.pk, row.assigned_staff.user_id)
-    logger.info("audit action=LEAVE_REJECTED id=%s reason=workload_rejected", leave.pk)
+    open_requests = active_workloads().filter(leave_day__leave=leave)
+    if keep is not None:
+        open_requests = open_requests.exclude(pk=keep.pk)
+    open_requests.update(status=WStatus.CANCELLED, decided_at=now)

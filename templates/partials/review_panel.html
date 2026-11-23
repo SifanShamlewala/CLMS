@@ -1,0 +1,28 @@
+{% comment %}Decision form (for the person who may decide) and the review history, on the leave detail page.
+Needs: application, decision_stage, can_approve_now, effect, approval_logs, sees_review.{% endcomment %}
+{% if decision_stage %}
+<h2 class="h5 mt-4">Your decision</h2>
+<div class="card card-body mb-3" style="max-width: 760px">
+  {% if decision_stage == "HOD" %}
+  <p class="mb-2">You are reviewing this as {% if application.applicant.role == "HOD" %}the Principal, in place of the head of department{% else %}head of department{% endif %}. Approving sends it to the Principal.</p>
+  {% else %}
+  <p class="mb-2">This is the final stage. If approved now, the balance would change like this:</p>
+  {% include "partials/final_effect.html" with effect=effect %}
+  <p class="text-muted small mt-2">Final approval is not available yet. You can reject for now.</p>
+  {% endif %}
+  <div class="mt-2">{% include "partials/decision_form.html" with leave=application stage=decision_stage can_approve=can_approve_now from_page="detail" %}</div>
+</div>
+{% endif %}
+
+{% if sees_review and approval_logs %}
+<h2 class="h5 mt-4">Review history</h2>
+<ul class="list-group mb-4" style="max-width: 760px">
+  {% for log in approval_logs %}
+  <li class="list-group-item">
+    <strong>{{ log.get_action_display }}</strong>
+    <span class="text-muted small">by {{ log.action_by.get_full_name|default:log.action_by.get_username }}, {{ log.created_at|date:"d M Y, H:i" }}</span>
+    {% if log.remarks %}<div>“{{ log.remarks }}”</div>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

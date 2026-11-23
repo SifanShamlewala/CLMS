@@ -1,0 +1,9 @@
+{% comment %}What approving now would do to the applicant's balance. Needs: effect.{% endcomment %}
+<dl class="row small mb-0">
+  <dt class="col-7">Balance now</dt><dd class="col-5 mb-0">{{ effect.available|floatformat:"-1" }}{% if not effect.has_balance %} (no balance set up){% endif %}</dd>
+  <dt class="col-7">Days counted</dt><dd class="col-5 mb-0">{{ effect.counted|floatformat:"-1" }}</dd>
+  <dt class="col-7">Paid (deducted)</dt><dd class="col-5 mb-0">{{ effect.paid|floatformat:"-1" }}</dd>
+  <dt class="col-7">Leave without pay</dt><dd class="col-5 mb-0">{{ effect.lwp|floatformat:"-1" }}</dd>
+  <dt class="col-7">Balance after</dt><dd class="col-5 mb-0">{{ effect.after|floatformat:"-1" }}</dd>
+</dl>
+{% if effect.differs %}<div class="text-warning-emphasis small mt-1">Differs from what the applicant saw when applying, because their balance has changed since.</div>{% endif %}
