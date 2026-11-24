@@ -8,7 +8,7 @@ Needs: application, decision_stage, can_approve_now, effect, approval_logs, sees
   {% else %}
   <p class="mb-2">This is the final stage. If approved now, the balance would change like this:</p>
   {% include "partials/final_effect.html" with effect=effect %}
-  <p class="text-muted small mt-2">Final approval is not available yet. You can reject for now.</p>
+  <p class="text-muted small mt-2">Approving is final. The figures are worked out again at that moment from the current balance, and days without pay are never deducted.</p>
   {% endif %}
   <div class="mt-2">{% include "partials/decision_form.html" with leave=application stage=decision_stage can_approve=can_approve_now from_page="detail" %}</div>
 </div>

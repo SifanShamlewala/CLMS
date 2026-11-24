@@ -6,9 +6,7 @@
   <span class="text-muted">{{ waiting }} waiting for you</span>
 </div>
 
-<div class="alert alert-info" role="alert">
-  Final approval, which deducts the balance, is not available yet. For now you can reject a leave, or approve a head's own leave at the first stage.
-</div>
+<p class="text-muted">Approving is final: the paid days are deducted from the balance, and the figures are worked out again at that moment from the current balance.</p>
 
 <form method="get" class="card card-body mb-3">
   <div class="row g-2 align-items-end">
@@ -39,7 +37,7 @@
           {% if l.stage == "HOD" %}
             {% include "partials/decision_form.html" with leave=l stage=l.stage can_approve=True from_page="queue" %}
           {% elif l.stage == "PRINCIPAL" %}
-            {% include "partials/decision_form.html" with leave=l stage=l.stage can_approve=False from_page="queue" %}
+            {% include "partials/decision_form.html" with leave=l stage=l.stage can_approve=True from_page="queue" %}
           {% else %}<a class="small" href="{% url 'leave_detail' l.pk %}">Open</a>{% endif %}
         </td>
       </tr>

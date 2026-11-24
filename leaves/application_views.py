@@ -13,7 +13,7 @@ from core.permissions import get_profile, role_required
 from core.validation import DomainError
 
 from . import applications
-from . import approvals, workload
+from . import approvals, cancellation, workload
 from .access import can_see_balance_details, can_view_application
 from .applications import APPLICANT_ROLES, days_text
 from .models import LeaveApplication, LeaveDay, LeaveWorkload, StaffLeaveBalance
@@ -141,9 +141,10 @@ def _detail_context(request, application, errors=None, values=None):
         "days": days,
         # The same people who may see the balance may read the reviewers' remarks.
         "sees_review": sees_balance,
+        "can_cancel": is_owner and cancellation.no_action_taken(application),
         "approval_logs": list(application.approval_logs.select_related("action_by")) if sees_balance else [],
         "decision_stage": stage,
-        "can_approve_now": stage == approvals.HOD_STAGE,
+        "can_approve_now": stage is not None,
         "effect": approvals.final_effect(application) if stage == approvals.PRINCIPAL_STAGE else None,
         "totals": {"counted": counted, "lwp": lwp, "paid": counted - lwp},
         "next_step": next_step_text(application.status),
@@ -233,4 +234,19 @@ def workload_remove(request, pk):
     messages.success(request, "Request withdrawn." + (
         f" {next_step_text(leave.status)}" if leave.status != LeaveApplication.Status.WORKLOAD_PENDING else ""
     ))
+    return redirect("leave_detail", pk=application.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def leave_cancel(request, pk):
+    application = _visible_application(request, pk)
+    try:
+        cancellation.cancel_leave(
+            application=application, remarks=request.POST.get("remarks"), actor=request.user
+        )
+    except DomainError as exc:
+        messages.error(request, exc.message)
+    else:
+        messages.success(request, f"Leave #{application.pk} cancelled. Its dates are free again.")
     return redirect("leave_detail", pk=application.pk)

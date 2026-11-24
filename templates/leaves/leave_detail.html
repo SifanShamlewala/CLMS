@@ -20,6 +20,7 @@
     <dt class="col-sm-3">Workload cover</dt><dd class="col-sm-9">{% if application.requires_workload %}Needed{% else %}Not needed{% endif %}</dd>
     <dt class="col-sm-3">Submitted</dt><dd class="col-sm-9">{{ application.submitted_at|date:"d M Y, H:i" }}</dd>
     {% if sees_balance %}<dt class="col-sm-3">Balance at submission</dt><dd class="col-sm-9">{% if application.balance_before is not None %}{{ application.balance_before|floatformat:"-1" }} days{% else %}Not recorded{% endif %}</dd>{% endif %}
+    {% if sees_balance and application.status == "APPROVED" and application.balance_after is not None %}<dt class="col-sm-3">Balance after approval</dt><dd class="col-sm-9">{{ application.balance_after|floatformat:"-1" }} days</dd>{% endif %}
   </dl>
 </div>
 
@@ -58,4 +59,16 @@
 {% if cover %}{% include "partials/workload_panel.html" %}{% endif %}
 
 {% include "partials/review_panel.html" %}
+
+{% if can_cancel %}
+<h2 class="h5 mt-4">Cancel this application</h2>
+<div class="card card-body mb-4" style="max-width: 760px">
+  <p class="mb-2">You can cancel while nobody has answered a cover request. Its dates become free and nothing is deducted.</p>
+  <form method="post" action="{% url 'leave_cancel' application.pk %}" class="mb-0">
+    {% csrf_token %}
+    <input class="form-control form-control-sm mb-2" type="text" name="remarks" maxlength="300" placeholder="Reason (optional)" aria-label="Reason for cancelling">
+    <button class="btn btn-sm btn-outline-danger" type="submit">Cancel application</button>
+  </form>
+</div>
+{% endif %}
 {% endblock %}

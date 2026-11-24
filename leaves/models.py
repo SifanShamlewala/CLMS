@@ -223,16 +223,33 @@ class AppendOnlyQuerySet(models.QuerySet):
     """History must never be rewritten, so bulk changes are refused as well."""
 
     def update(self, **kwargs):
-        raise RuntimeError("Approval history is append-only and cannot be updated.")
+        raise RuntimeError("This history is append-only and cannot be updated.")
 
     def bulk_update(self, objs, fields, batch_size=None):
-        raise RuntimeError("Approval history is append-only and cannot be updated.")
+        raise RuntimeError("This history is append-only and cannot be updated.")
 
     def delete(self):
-        raise RuntimeError("Approval history is append-only and cannot be deleted.")
+        raise RuntimeError("This history is append-only and cannot be deleted.")
 
 
-class LeaveApprovalLog(models.Model):
+class AppendOnlyModel(models.Model):
+    """A table that only ever grows: a saved row cannot be changed or deleted."""
+
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise RuntimeError("This history is append-only and cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise RuntimeError("This history is append-only and cannot be deleted.")
+
+
+class LeaveApprovalLog(AppendOnlyModel):
     """One row for each decision or step on a leave. Rows are only ever added.
 
     Day 8 writes the head-of-department and Principal decisions here (with the
@@ -279,19 +296,60 @@ class LeaveApprovalLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_deleted = models.BooleanField(default=False)  # in the spec; nothing sets it
 
-    objects = AppendOnlyQuerySet.as_manager()
-
     class Meta:
         ordering = ["created_at", "id"]
         indexes = [models.Index(fields=["leave", "created_at"])]
 
-    def save(self, *args, **kwargs):
-        if not self._state.adding:
-            raise RuntimeError("Approval history is append-only and cannot be changed.")
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        raise RuntimeError("Approval history is append-only and cannot be deleted.")
-
     def __str__(self):
         return f"{self.action} on leave {self.leave_id}"
+
+
+class BalanceTransaction(AppendOnlyModel):
+    """The balance ledger: every change to ``StaffLeaveBalance.used`` leaves a row here.
+
+    ``amount`` is always positive; the type says which way the balance moved. A paid
+    day can be deducted once and restored once, which the unique constraint enforces
+    even if two requests race.
+    """
+
+    class Type(models.TextChoices):
+        DEDUCT = "DEDUCT", "Deducted"
+        RESTORE = "RESTORE", "Restored"
+        ADJUST = "ADJUST", "Adjusted"
+
+    balance = models.ForeignKey(StaffLeaveBalance, on_delete=models.PROTECT, related_name="transactions")
+    leave = models.ForeignKey(
+        LeaveApplication, on_delete=models.PROTECT, null=True, blank=True, related_name="balance_transactions"
+    )
+    leave_day = models.ForeignKey(
+        LeaveDay, on_delete=models.PROTECT, null=True, blank=True, related_name="balance_transactions"
+    )
+    type = models.CharField(max_length=10, choices=Type)
+    amount = models.DecimalField(max_digits=5, decimal_places=1)
+    # The days remaining (total minus used) just before and just after this row.
+    balance_before = models.DecimalField(max_digits=5, decimal_places=1)
+    balance_after = models.DecimalField(max_digits=5, decimal_places=1)
+    remarks = models.CharField(max_length=300, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="balance_transactions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["leave_day", "type"],
+                condition=Q(leave_day__isnull=False, type__in=["DEDUCT", "RESTORE"]),
+                name="balancetx_one_per_day_and_type",
+            ),
+            models.CheckConstraint(condition=Q(amount__gt=0), name="balancetx_amount_positive"),
+            models.CheckConstraint(
+                condition=Q(type="ADJUST") | Q(leave_day__isnull=False), name="balancetx_day_needs_leave_day"
+            ),
+        ]
+        indexes = [models.Index(fields=["balance", "created_at"])]
+
+    def __str__(self):
+        return f"{self.type} {self.amount} on balance {self.balance_id}"

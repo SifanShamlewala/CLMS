@@ -107,13 +107,13 @@ class PrincipalQueueViewTests(ViewTestCase):
         self.leave = self.pending_principal()
         self.sign_in(self.principal)
 
-    def test_shows_the_balance_effect_and_only_a_reject_button(self):
+    def test_shows_the_balance_effect_with_approve_and_reject_buttons(self):
         page = self.client.get(reverse("principal_queue"))
         self.assertEqual([l.pk for l in page.context["page_obj"]], [self.leave.pk])
         self.assertContains(page, "Balance after")
         self.assertContains(page, "Paid (deducted)")
         self.assertContains(page, 'value="reject"')
-        self.assertNotContains(page, 'value="approve"')
+        self.assertContains(page, 'value="approve"')
         effect = page.context["page_obj"][0].effect
         self.assertEqual((effect["paid"], effect["after"]), (D("5"), D("5")))
 
@@ -134,8 +134,10 @@ class PrincipalQueueViewTests(ViewTestCase):
         page = self.client.get(reverse("principal_queue") + "?status=")
         self.assertEqual([l.applicant for l in page.context["page_obj"]], [self.asha])
 
-    def test_the_notice_says_final_approval_is_not_there_yet(self):
-        self.assertContains(self.client.get(reverse("principal_queue")), "not available yet")
+    def test_the_page_explains_that_approving_is_final(self):
+        page = self.client.get(reverse("principal_queue"))
+        self.assertContains(page, "Approving is final")
+        self.assertNotContains(page, "not available yet")
 
 
 class DecideViewTests(ViewTestCase):
@@ -176,14 +178,14 @@ class DecideViewTests(ViewTestCase):
         response = self.post(leave, decision="reject", remarks="No")
         self.assertRedirects(response, reverse("principal_queue"))
 
-    def test_the_principal_cannot_approve_yet(self):
-        leave = self.pending_principal(self.ben)
+    def test_the_principal_approves_and_the_balance_is_deducted(self):
+        self.decide(self.leave, self.hod, "approve")
         self.sign_in(self.principal)
-        response = self.post(leave, decision="approve")
+        response = self.post(self.leave, decision="approve", remarks="Granted")
         self.assertRedirects(response, reverse("principal_queue"))
-        self.assertEqual(self.refreshed(leave).status, Status.PRINCIPAL_PENDING)
-        self.assertIn("not available yet", self.flashed(response)[0])
-        self.assertEqual(StaffLeaveBalance.objects.get(staff=self.asha).used, 0)
+        self.assertEqual(self.refreshed(self.leave).status, Status.APPROVED)
+        self.assertEqual(StaffLeaveBalance.objects.get(staff=self.asha).used, D("5"))
+        self.assertIn("approved", self.flashed(response)[0])
 
     def test_get_is_not_allowed(self):
         self.assertEqual(self.client.get(self.decide_url(self.leave)).status_code, 405)
@@ -243,14 +245,14 @@ class DetailPageTests(ViewTestCase):
             self.sign_in(person)
             self.assertNotContains(self.client.get(self.detail), "Your decision")
 
-    def test_the_principal_sees_the_effect_and_only_reject_at_the_final_stage(self):
+    def test_the_principal_sees_the_effect_and_both_buttons_at_the_final_stage(self):
         leave = self.pending_principal(self.ben)
         self.sign_in(self.principal)
         page = self.client.get(reverse("leave_detail", args=[leave.pk]))
         self.assertContains(page, "Your decision")
         self.assertContains(page, "Balance after")
-        self.assertContains(page, "Final approval is not available yet")
-        self.assertNotContains(page, 'value="approve"')
+        self.assertContains(page, "Approving is final")
+        self.assertContains(page, 'value="approve"')
 
     def test_the_form_goes_away_once_decided(self):
         self.decide(self.leave, self.hod, "approve")

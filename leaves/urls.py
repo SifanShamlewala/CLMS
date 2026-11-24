@@ -11,6 +11,7 @@ urlpatterns = [
     path("leaves/apply/", application_views.leave_apply, name="leave_apply"),
     path("leaves/mine/", application_views.leave_mine, name="leave_mine"),
     path("leaves/<int:pk>/", application_views.leave_detail, name="leave_detail"),
+    path("leaves/<int:pk>/cancel/", application_views.leave_cancel, name="leave_cancel"),
     # Workload cover
     path("leaves/<int:pk>/workload/assign/", application_views.workload_assign, name="workload_assign"),
     path("workload/", workload_views.workload_inbox, name="workload_inbox"),

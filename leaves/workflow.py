@@ -37,8 +37,8 @@ def stage_after_workload(role, policy):
 def initial_status(role, requires_workload, policy):
     """The status a brand-new application starts in."""
     if role == Role.PRINCIPAL:
-        # Decision D12: the Principal's own leave skips workload and HOD. The automatic
-        # approval itself is added with the approval service on Day 9.
+        # Decision D12: the Principal's own leave skips workload and HOD. It starts here for a
+        # moment only: submitting it runs the final approval in the same transaction.
         return Status.PRINCIPAL_PENDING
     if requires_workload:
         return Status.WORKLOAD_PENDING

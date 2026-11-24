@@ -110,12 +110,12 @@ class SubmitRolesTests(SubmitTestCase):
         application = applications.submit_application(user=self.hod.user, data=data)
         self.assertEqual(application.status, Status.PRINCIPAL_PENDING)
 
-    def test_the_principals_leave_waits_at_the_principal_stage_with_no_workload(self):
+    def test_the_principals_leave_needs_no_workload_and_is_approved_automatically(self):
         application = self.submit(self.principal.user)
-        self.assertEqual(application.status, Status.PRINCIPAL_PENDING)
+        self.assertEqual(application.status, Status.APPROVED)
         self.assertFalse(application.requires_workload)
         self.assertFalse(any(d.workload_required for d in application.days.all()))
-        self.assertFalse(application.is_principal_auto_approved)  # automatic approval arrives with Day 9
+        self.assertTrue(application.is_principal_auto_approved)
 
     def test_the_administrator_without_a_profile_and_inactive_profiles_cannot_apply(self):
         with self.assertRaises(PermissionDenied):

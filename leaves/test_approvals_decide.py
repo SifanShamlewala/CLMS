@@ -115,15 +115,6 @@ class RejectTests(ApprovalTestCase):
         self.assertEqual(self.logs(leave), [Action.HOD_APPROVED, Action.PRINCIPAL_REJECTED])
         self.assertFalse(leave.days.filter(blocks_overlap=True).exists())
 
-    def test_the_principal_cannot_approve_yet_and_nothing_changes(self):
-        leave = self.pending_principal(self.ben)
-        with self.assertRaises(DomainError) as caught:
-            self.decide(leave, self.principal, "approve", "Go ahead")
-        self.assertIn("not available yet", caught.exception.errors["form"])
-        self.assertEqual(self.refreshed(leave).status, Status.PRINCIPAL_PENDING)
-        self.assertEqual(self.logs(leave), [Action.HOD_APPROVED])
-        self.assertEqual(StaffLeaveBalance.objects.get(staff=self.asha).used, 0)
-
 
 class WhoMayDecideTests(ApprovalTestCase):
     def setUp(self):
@@ -172,8 +163,11 @@ class WhoMayDecideTests(ApprovalTestCase):
 
     def test_the_principal_cannot_decide_their_own_leave(self):
         leave = self.apply(self.principal, requires_workload="")
-        self.assertEqual(leave.status, Status.PRINCIPAL_PENDING)
+        # It is approved on submission; force it back to the final stage to prove the rule itself.
+        LeaveApplication.objects.filter(pk=leave.pk).update(status=Status.PRINCIPAL_PENDING)
+        leave.refresh_from_db()
         self.refuse(leave, self.principal, "reject")
+        self.refuse(leave, self.principal, "approve")
 
 
 class PrincipalActingAsHeadTests(ApprovalTestCase):

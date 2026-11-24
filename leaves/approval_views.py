@@ -83,9 +83,20 @@ def leave_decide(request, pk):
         return redirect(*back)
     if leave.status == Status.REJECTED:
         messages.success(request, f"Leave #{leave.pk} rejected. The applicant can read your remarks.")
+    elif leave.status == Status.APPROVED:
+        paid = _days(leave.total_days_paid)
+        text = f"Leave #{leave.pk} approved. {paid} paid day{'' if paid == '1' else 's'} deducted from the balance"
+        if leave.total_days_lwp:
+            text += f", {_days(leave.total_days_lwp)} without pay"
+        messages.success(request, text + ".")
     else:
         messages.success(request, f"Leave #{leave.pk} approved by you. It now waits for the Principal.")
     return redirect(*back)
+
+
+def _days(value):
+    """5.0 reads as 5, 2.5 stays 2.5."""
+    return f"{value.normalize():f}"
 
 
 def _back_url(request, application):

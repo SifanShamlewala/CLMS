@@ -20,6 +20,7 @@ from core.validation import DomainError, parse_date, required_text, validate
 
 from .day_engine import FRACTIONS, FULL, MAX_DATES, DayPlan, allocate_leave, plan_days, summarize
 from .models import LeaveApplication, LeaveDay, StaffLeaveBalance
+from .final_approval import finalize_approval
 from .workflow import initial_status
 from .workload import cover_clash_dates
 
@@ -75,8 +76,13 @@ class Preview:
     warnings: list = field(default_factory=list)
 
     @property
+    def auto_approved(self):
+        """The Principal's own leave is approved the moment it is submitted (decision D12)."""
+        return self.applicant.role == Role.PRINCIPAL
+
+    @property
     def status_label(self):
-        return Status(self.status).label
+        return "Approved automatically" if self.auto_approved else Status(self.status).label
 
 
 # ------------------------------------------------------------------- blockers
@@ -214,7 +220,10 @@ def _prepare(profile, data):
     warnings = _warnings(profile, leave_type, year, balance, available, summary)
     warnings.extend(_cover_warnings(profile, start, end))
     if profile.role == Role.PRINCIPAL:
-        warnings.append("As Principal, your own leave skips the workload and head-of-department stages.")
+        warnings.append(
+            "As Principal, your own leave skips the workload and head-of-department stages "
+            "and is approved automatically when you submit it."
+        )
     return Preview(
         applicant=profile, leave_type=leave_type, year=year, start=start, end=end,
         reason=cleaned["reason"], requires_workload=requires_workload, rows=rows, summary=summary,
@@ -309,6 +318,10 @@ def submit_application(*, user, data):
                 )
                 for row in preview.rows
             ])
+            if profile.role == Role.PRINCIPAL:
+                # Decision D12: runs the same final approval as any other leave, so the
+                # balance is deducted and the approval is logged, or none of it is saved.
+                finalize_approval(application, actor=user, auto=True)
     except IntegrityError:  # someone else's request got the same dates first
         raise DomainError({
             "form": "Another application for these dates was just saved. Check My leaves, then try again."

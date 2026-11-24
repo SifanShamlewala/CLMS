@@ -1,13 +1,13 @@
 """Head-of-department and Principal decisions (spec 8.2) and the two review queues.
 
-Rules (decisions D26 to D31):
+Rules (decisions D26 to D32, and D33 onwards for final approval):
 * The head of the applicant's department decides at HOD_PENDING, never on their own leave.
   An HOD's own leave (route "Principal as HOD") is decided at that stage by the Principal.
 * The Principal decides at PRINCIPAL_PENDING, never on their own leave.
 * Approving at the HOD stage moves the leave to PRINCIPAL_PENDING. Rejecting at any stage
   needs remarks and rejects the leave for good; its dates are free again.
-* Final approval, which deducts the balance, is Day 9. Until then the Principal can only reject,
-  because approving without deducting would leave the books wrong.
+* The Principal's approval is the final approval: it recomputes paid and unpaid days from today's
+  balance and deducts it, in the same transaction (see ``final_approval.py``).
 * Every decision locks the leave row, so two clicks or two reviewers cannot both succeed, and is
   written to the append-only approval log with the reviewer's remarks.
 """
@@ -24,6 +24,7 @@ from core.permissions import get_profile, require_role
 from core.validation import DomainError, optional_text, parse_choice, required_text, validate
 
 from .day_engine import DayPlan, allocate_leave, summarize
+from .final_approval import finalize_approval
 from .models import LeaveApplication, LeaveApprovalLog, StaffLeaveBalance
 from .workload import lock_leave, reject_leave
 
@@ -101,8 +102,9 @@ def _stage_of(leave):
 def _approve(leave, stage, remarks, actor):
     text = optional_text(remarks, "remarks", MAX_REMARKS, "Remarks")
     if stage == PRINCIPAL_STAGE:
-        # Decision D29: no approval without the balance deduction, which is built on Day 9.
-        raise DomainError({"form": "Final approval is not available yet. You can reject, or wait for the next release."})
+        # The final decision: recompute, deduct the balance and log it, all in this transaction.
+        finalize_approval(leave, actor=actor, remarks=text)
+        return
     leave.status = Status.PRINCIPAL_PENDING
     leave.save(update_fields=["status", "updated_at"])
     _log(leave, Action.HOD_APPROVED, text, actor)

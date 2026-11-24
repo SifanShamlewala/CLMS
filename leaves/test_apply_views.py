@@ -180,10 +180,12 @@ class ApplySubmitTests(LeaveTestCase):
         self.assertContains(response, "Waiting for workload cover to be arranged and accepted.")
         self.assertEqual(application.days.count(), 5)
 
-    def test_the_principal_ends_at_the_principal_stage(self):
+    def test_the_principals_own_leave_is_approved_straight_away(self):
         self.sign_in(self.principal)
         self.submit()
-        self.assertEqual(LeaveApplication.objects.get().status, Status.PRINCIPAL_PENDING)
+        application = LeaveApplication.objects.get()
+        self.assertEqual(application.status, Status.APPROVED)
+        self.assertTrue(application.is_principal_auto_approved)
 
     def test_a_second_identical_submit_is_refused_and_nothing_extra_is_saved(self):
         self.submit()
